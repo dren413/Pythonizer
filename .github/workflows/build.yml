@@ -60,8 +60,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          releaseName: 'Pythonizer ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}'
+          tagName: ${{ inputs.release_tag || github.ref_name }}
+          releaseName: Pythonizer ${{ inputs.release_tag || github.ref_name }}
           releaseBody: ''
           releaseDraft: false
           prerelease: false
@@ -73,8 +73,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          releaseName: 'Pythonizer ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}'
+          tagName: ${{ inputs.release_tag || github.ref_name }}
+          releaseName: Pythonizer ${{ inputs.release_tag || github.ref_name }}
           releaseBody: ''
           releaseDraft: false
           prerelease: false
