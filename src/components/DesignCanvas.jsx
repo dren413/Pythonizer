@@ -1,0 +1,249 @@
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import useDesignStore, { WIDGET_EVENTS } from '../store/designStore';
+
+// ── Widget rendering ───────────────────────────────────────
+function WidgetPreview({ widget }) {
+  const disabledClass = widget.props.enabled === false ? ' widget-disabled' : '';
+
+  switch (widget.type) {
+    case 'Button':
+      return <div className={`preview-button${disabledClass}`}>{widget.props.text}</div>;
+    case 'Label':
+      return <div className={`preview-label${disabledClass}`} style={{ color: widget.props.fg }}>{widget.props.text}</div>;
+    case 'Entry':
+      return <div className={`preview-entry${disabledClass}`} />;
+    case 'Text':
+      return <div className={`preview-text${disabledClass}`} />;
+    case 'Listbox':
+      return (
+        <div className={`preview-listbox${disabledClass}`}>
+          {(widget.props.items || '').split(',').map((item, i) => (
+            <div key={i} className="lb-item">{item.trim()}</div>
+          ))}
+        </div>
+      );
+    case 'Checkbutton':
+      return <div className={`preview-check${disabledClass}`}><span className="ck-box" /> {widget.props.text}</div>;
+    case 'Radiobutton':
+      return <div className={`preview-radio${disabledClass}`}><span className="rd-dot" /> {widget.props.text}</div>;
+    case 'Scale': {
+      const isVertical = widget.props.orient === 'vertical';
+      return (
+        <div className={`preview-scale${isVertical ? ' vertical' : ''}${disabledClass}`}>
+          <div className="scale-track" />
+          <div className="scale-thumb" />
+        </div>
+      );
+    }
+    default:
+      return <div>{widget.type}</div>;
+  }
+}
+
+// ── Canvas ─────────────────────────────────────────────────
+export default function DesignCanvas() {
+  const {
+    widgets, selectedWidgetId, canvasSize, windowTitle, windowBg,
+    addWidget, updateWidget, selectWidget, removeWidget,
+    setCanvasSize, toggleWidgetEvent, _pushHistory,
+  } = useDesignStore();
+
+  const canvasRef = useRef(null);
+  const [dragging, setDragging] = useState(null);
+  const [resizing, setResizing] = useState(null);
+  const [canvasResizing, setCanvasResizing] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+
+  // ── Drop from palette ──
+  function handleDrop(e) {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('widget-type');
+    if (!type) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    addWidget(type, Math.round(e.clientX - rect.left), Math.round(e.clientY - rect.top));
+  }
+
+  // ── Widget drag ──
+  function handleWidgetMouseDown(e, widget) {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    selectWidget(widget.id);
+    setContextMenu(null);
+    _pushHistory();
+    const rect = canvasRef.current.getBoundingClientRect();
+    setDragging({
+      id: widget.id,
+      offsetX: e.clientX - rect.left - widget.x,
+      offsetY: e.clientY - rect.top - widget.y,
+    });
+  }
+
+  // ── Widget resize handle ──
+  function handleResizeMouseDown(e, widget) {
+    e.stopPropagation();
+    e.preventDefault();
+    _pushHistory();
+    setResizing({
+      id: widget.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: widget.width,
+      startH: widget.height,
+    });
+  }
+
+  // ── Canvas resize handle ──
+  function handleCanvasResizeDown(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    _pushHistory();
+    setCanvasResizing({
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: canvasSize.width,
+      startH: canvasSize.height,
+    });
+  }
+
+  useEffect(() => {
+    function onMouseMove(e) {
+      if (dragging) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        updateWidget(dragging.id, {
+          x: Math.max(0, Math.round(e.clientX - rect.left - dragging.offsetX)),
+          y: Math.max(0, Math.round(e.clientY - rect.top - dragging.offsetY)),
+        });
+      }
+      if (resizing) {
+        const dx = e.clientX - resizing.startX;
+        const dy = e.clientY - resizing.startY;
+        updateWidget(resizing.id, {
+          width: Math.max(20, resizing.startW + dx),
+          height: Math.max(10, resizing.startH + dy),
+        });
+      }
+      if (canvasResizing) {
+        const dx = e.clientX - canvasResizing.startX;
+        const dy = e.clientY - canvasResizing.startY;
+        setCanvasSize({
+          width: Math.max(200, canvasResizing.startW + dx),
+          height: Math.max(150, canvasResizing.startH + dy),
+        });
+      }
+    }
+    function onMouseUp() {
+      setDragging(null);
+      setResizing(null);
+      setCanvasResizing(null);
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [dragging, resizing, canvasResizing]);
+
+  // ── Keyboard ──
+  function handleKeyDown(e) {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedWidgetId) {
+      removeWidget(selectedWidgetId);
+    }
+  }
+
+  // ── Context menu ──
+  function handleContextMenu(e, widget) {
+    e.preventDefault();
+    e.stopPropagation();
+    selectWidget(widget.id);
+    const rect = canvasRef.current.getBoundingClientRect();
+    setContextMenu({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      widgetId: widget.id,
+      widgetType: widget.type,
+      widgetName: widget.name,
+      widgetEvents: widget.events || {},
+    });
+  }
+
+  function handleCanvasClick(e) {
+    if (e.target === canvasRef.current || e.target.classList.contains('canvas-titlebar')) {
+      selectWidget(null);
+      setContextMenu(null);
+    }
+  }
+
+  const availableEvents = contextMenu ? (WIDGET_EVENTS[contextMenu.widgetType] || []) : [];
+
+  return (
+    <div className="canvas-wrapper">
+      <div className="canvas-window"
+        style={{ width: canvasSize.width, height: canvasSize.height + 28 }}
+      >
+        {/* Titlebar */}
+        <div className="canvas-titlebar" onClick={handleCanvasClick}>
+          <span className="titlebar-dots">
+            <span className="dot red" /><span className="dot yellow" /><span className="dot green" />
+          </span>
+          <span className="titlebar-text">{windowTitle}</span>
+        </div>
+
+        {/* Canvas body */}
+        <div className="canvas-body"
+          ref={canvasRef}
+          tabIndex={0}
+          style={{ width: canvasSize.width, height: canvasSize.height, backgroundColor: windowBg || '#ffffff' }}
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          onClick={handleCanvasClick}
+          onKeyDown={handleKeyDown}
+        >
+          {widgets.map((w) => (
+            <div key={w.id}
+              className={`canvas-widget${w.id === selectedWidgetId ? ' selected' : ''}`}
+              style={{
+                left: w.x, top: w.y,
+                width: w.width, height: w.height,
+                backgroundColor: w.props.bg || undefined,
+              }}
+              onMouseDown={(e) => handleWidgetMouseDown(e, w)}
+              onContextMenu={(e) => handleContextMenu(e, w)}
+            >
+              <WidgetPreview widget={w} />
+              {w.id === selectedWidgetId && (
+                <div className="resize-handle" onMouseDown={(e) => handleResizeMouseDown(e, w)} />
+              )}
+            </div>
+          ))}
+
+          {/* Context menu */}
+          {contextMenu && (
+            <div className="ctx-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+              {availableEvents.map((evt) => (
+                <div key={evt} className="ctx-item"
+                  onClick={() => {
+                    toggleWidgetEvent(contextMenu.widgetId, evt);
+                    setContextMenu(null);
+                  }}>
+                  <span className={`ctx-check${contextMenu.widgetEvents[evt] ? ' active' : ''}`}>
+                    {contextMenu.widgetEvents[evt] ? '✓' : ' '}
+                  </span>
+                  on_{contextMenu.widgetName}_{evt}
+                </div>
+              ))}
+              {availableEvents.length > 0 && <div className="ctx-sep" />}
+              <div className="ctx-item ctx-delete"
+                onClick={() => { removeWidget(contextMenu.widgetId); setContextMenu(null); }}>
+                Delete
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Canvas resize handle */}
+        <div className="canvas-resize-handle" onMouseDown={handleCanvasResizeDown} />
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,37 @@
+node_modules/
+dist/
+release/
+.DS_Store
+*.pyc
+__pycache__/
+src-tauri/target/
+src-tauri/gen/
+*.log
+coverage/
+
+# Tauri icon generation intermediates
+/tmp/pythonizer_square.png
+
+# Local Python runtimes for packaging
+python-runtime/*
+!python-runtime/.gitkeep
+www/pythonizer-bundle.zip
+
+# Env and local config
+.env
+.env.local
+.env.*.local
+
+# Code signing material
+*.p12
+*.pfx
+*.mobileprovision
+*.cer
+*.crt
+*.key
+
+# Editor artifacts
+.vscode/settings.json
+.idea/
+*.swp
+*~
