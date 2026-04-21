@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "A minimalistic Python/tkinter GUI builder for students",
   "scripts": {
+    "tauri": "tauri",
     "dev": "tauri dev",
     "dev:vite": "vite --port 5173 --strictPort",
     "build": "tauri build",
