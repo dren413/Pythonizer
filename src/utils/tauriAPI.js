@@ -14,7 +14,7 @@ const tauriAPI = {
   // ── Project ──────────────────────────────────────────────────────────────
   newProject: () => invoke('new_project'),
   openProject: () => {},  // open is driven by the menu (Rust emits project-opened)
-  saveProject: (data) => invoke('save_project', data),
+  saveProject: (data) => invoke('save_project', { args: data }),
 
   // ── Python interpreter ────────────────────────────────────────────────────
   getPythonInfo: () => invoke('get_python_info'),
