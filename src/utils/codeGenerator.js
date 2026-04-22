@@ -329,15 +329,14 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
   if (onStartBody.length > 0) {
     onStartBody.forEach((line) => L.push(`        ${line}`));
   } else if (hasPygame) {
-    L.push(`        # Set up the pygame canvas (width and height must match the widget size)`);
-    L.push(`        self.screen = self.setup_pygame(self.${firstPygame.name}, ${firstPygame.width}, ${firstPygame.height})`);
-    L.push('        self.FPS = 60');
-    L.push('        self.clock = pygame.time.Clock()');
+    const cn = `self.${firstPygame.name}`;
+    L.push(`        # Set up pygame inside the canvas widget (size must match widget dimensions)`);
+    L.push(`        self.screen = self.setup_pygame(${cn}, ${firstPygame.width}, ${firstPygame.height})`);
+    L.push(`        ${cn}.FPS = 60`);
+    L.push(`        ${cn}.clock = pygame.time.Clock()`);
     L.push('');
-    L.push('        # Static drawing here (backgrounds etc.)');
+    L.push('        # Static drawing here (backgrounds, images etc.)');
     L.push('');
-    L.push('        # Start the game loop');
-    L.push('        self._loop_running = True');
     L.push('        self._game_loop()');
   } else {
     L.push('        # Runs automatically when the app starts. Use button1, label1 etc.');
@@ -362,22 +361,19 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
     if (loopBody.length > 0) {
       loopBody.forEach((line) => L.push(`        ${line}`));
     } else {
-      L.push('        if not self._loop_running:');
-      L.push('            return');
-      L.push('');
+      const cn = `self.${firstPygame.name}`;
       L.push('        # Handle events');
       L.push('        for event in pygame.event.get():');
-      L.push('            if event.type == pygame.QUIT:');
-      L.push('                self._loop_running = False');
+      L.push('            pass  # e.g. if event.type == pygame.KEYDOWN: ...');
       L.push('');
       L.push('        # Game logic here');
       L.push('');
-      L.push('        # Update the view (draw your scene here)');
+      L.push('        # Draw your scene here');
       L.push('        self.screen.fill((30, 30, 40))  # background colour');
-      L.push('        pygame.display.flip()');
+      L.push('        pygame.display.update()');
       L.push('');
-      L.push('        # Limit the FPS and schedule the next frame');
-      L.push('        self.clock.tick(self.FPS)');
+      L.push('        # Limit FPS and schedule the next frame');
+      L.push(`        ${cn}.clock.tick(${cn}.FPS)`);
       L.push('        self.root.after(0, self._game_loop)');
     }
   }

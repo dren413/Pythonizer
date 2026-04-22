@@ -265,7 +265,8 @@ const useDesignStore = create((set, get) => ({
     if (!defaults) return;
     get()._pushHistory();
     const id = `widget_${nextId++}`;
-    const prefix = type.toLowerCase();
+    const NAME_PREFIXES = { PygameCanvas: 'canvas' };
+    const prefix = NAME_PREFIXES[type] || type.toLowerCase();
     // Find first available name
     let idx = 1;
     const existingNames = new Set(get().widgets.map((w) => w.name));
