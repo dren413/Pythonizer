@@ -280,9 +280,8 @@ body {
   border: 1px solid transparent;
   border-radius: 3px;
   transition: border-color 0.1s;
-  /* padding-top is handled by adding 14px to rendered height in JSX */
   padding-top: 14px;
-  box-sizing: content-box; /* so height = content height; we add 14px in JSX for the label */
+  box-sizing: content-box;
 }
 .canvas-widget:hover { border-color: var(--accent); }
 .canvas-widget.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }

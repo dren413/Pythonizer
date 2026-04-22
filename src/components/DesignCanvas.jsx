@@ -212,8 +212,7 @@ export default function DesignCanvas() {
               style={{
                 left: w.x, top: w.y,
                 width: w.width,
-                /* +14 compensates for padding-top:14px (content-box) so preview area = w.height */
-                height: w.height + 14,
+                height: w.height,
                 backgroundColor: w.props.bg || undefined,
               }}
               onMouseDown={(e) => handleWidgetMouseDown(e, w)}
@@ -247,7 +246,7 @@ export default function DesignCanvas() {
                     updateWidget(contextMenu.widgetId, { name: v });
                     setContextMenu((m) => m ? { ...m, widgetName: v } : m);
                   }}
-                  onKeyDown={(e) => { if (e.key === 'Escape') setContextMenu(null); }}
+                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') setContextMenu(null); }}
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -262,7 +261,7 @@ export default function DesignCanvas() {
                       setCtxTextDraft(e.target.value);
                       updateWidgetProps(contextMenu.widgetId, { text: e.target.value });
                     }}
-                    onKeyDown={(e) => { if (e.key === 'Escape') setContextMenu(null); }}
+                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') setContextMenu(null); }}
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>

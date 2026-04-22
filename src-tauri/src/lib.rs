@@ -552,8 +552,12 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
     #[allow(unreachable_code)]
     {
+        let about = MenuItem::with_id(app, "about", "About Pythonizer", true, None::<&str>)?;
+        let sep_h1 = PredefinedMenuItem::separator(app)?;
+        let help_items: &[&dyn IsMenuItem<tauri::Wry>] = &[&sep_h1, &about];
+        let help_menu = Submenu::with_id_and_items(app, "help", "Help", true, help_items)?;
         let menu_items: &[&dyn IsMenuItem<tauri::Wry>] = &[
-            &file_menu, &edit_menu, &run_menu, &view_menu,
+            &file_menu, &edit_menu, &run_menu, &view_menu, &help_menu,
         ];
         Menu::with_items(app, menu_items)
     }

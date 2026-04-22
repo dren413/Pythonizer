@@ -1,6 +1,6 @@
 {
   "productName": "Pythonizer",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "identifier": "com.dren413.pythonizer",
   "build": {
     "beforeDevCommand": "npm run dev:vite",
@@ -36,7 +36,8 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "10.13"
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": "-"
     }
   }
 }

@@ -62,7 +62,14 @@ jobs:
         with:
           tagName: ${{ inputs.release_tag || github.ref_name }}
           releaseName: Pythonizer ${{ inputs.release_tag || github.ref_name }}
-          releaseBody: ''
+          releaseBody: |
+            ## macOS Installation
+            This build is ad-hoc signed (no Apple Developer ID). If macOS blocks the app:
+            1. Right-click the app in Applications → **Open** → confirm
+            2. Or run: `xattr -d com.apple.quarantine /Applications/Pythonizer.app`
+
+            ## Windows Installation
+            Run the NSIS `.exe` installer or the `.msi` package.
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }} --bundles dmg
