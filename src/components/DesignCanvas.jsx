@@ -44,8 +44,8 @@ function WidgetPreview({ widget }) {
 export default function DesignCanvas() {
   const {
     widgets, selectedWidgetId, canvasSize, windowTitle, windowBg,
-    addWidget, updateWidget, selectWidget, removeWidget,
-    setCanvasSize, toggleWidgetEvent, _pushHistory,
+    addWidget, updateWidget, updateWidgetProps, selectWidget, removeWidget,
+    setCanvasSize, toggleWidgetEvent, _pushHistory, isNameTaken,
   } = useDesignStore();
 
   const canvasRef = useRef(null);
@@ -53,6 +53,9 @@ export default function DesignCanvas() {
   const [resizing, setResizing] = useState(null);
   const [canvasResizing, setCanvasResizing] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [ctxNameDraft, setCtxNameDraft] = useState('');
+  const [ctxTextDraft, setCtxTextDraft] = useState('');
+  const [ctxNameError, setCtxNameError] = useState(null);
 
   // ── Drop from palette ──
   function handleDrop(e) {
@@ -157,6 +160,9 @@ export default function DesignCanvas() {
     e.stopPropagation();
     selectWidget(widget.id);
     const rect = canvasRef.current.getBoundingClientRect();
+    setCtxNameDraft(widget.name);
+    setCtxTextDraft(widget.props.text || '');
+    setCtxNameError(null);
     setContextMenu({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
@@ -164,6 +170,7 @@ export default function DesignCanvas() {
       widgetType: widget.type,
       widgetName: widget.name,
       widgetEvents: widget.events || {},
+      hasText: 'text' in widget.props,
     });
   }
 
@@ -204,7 +211,9 @@ export default function DesignCanvas() {
               className={`canvas-widget${w.id === selectedWidgetId ? ' selected' : ''}`}
               style={{
                 left: w.x, top: w.y,
-                width: w.width, height: w.height,
+                width: w.width,
+                /* +14 compensates for padding-top:14px (content-box) so preview area = w.height */
+                height: w.height + 14,
                 backgroundColor: w.props.bg || undefined,
               }}
               onMouseDown={(e) => handleWidgetMouseDown(e, w)}
@@ -220,20 +229,65 @@ export default function DesignCanvas() {
 
           {/* Context menu */}
           {contextMenu && (
-            <div className="ctx-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
-              {availableEvents.map((evt) => (
-                <div key={evt} className="ctx-item"
-                  onClick={() => {
-                    toggleWidgetEvent(contextMenu.widgetId, evt);
-                    setContextMenu(null);
-                  }}>
-                  <span className={`ctx-check${contextMenu.widgetEvents[evt] ? ' active' : ''}`}>
-                    {contextMenu.widgetEvents[evt] ? '✓' : ' '}
-                  </span>
-                  on_{contextMenu.widgetName}_{evt}
+            <div className="ctx-menu" style={{ left: contextMenu.x, top: contextMenu.y }}
+              onMouseDown={(e) => e.stopPropagation()}>
+              {/* Rename variable */}
+              <div className="ctx-header">Variable name</div>
+              <div className="ctx-rename-row">
+                <input
+                  value={ctxNameDraft}
+                  autoFocus
+                  style={ctxNameError ? { borderColor: 'var(--red)' } : undefined}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+                    setCtxNameDraft(v);
+                    if (!v) { setCtxNameError('Cannot be empty'); return; }
+                    if (isNameTaken(v, contextMenu.widgetId)) { setCtxNameError('Name taken'); return; }
+                    setCtxNameError(null);
+                    updateWidget(contextMenu.widgetId, { name: v });
+                    setContextMenu((m) => m ? { ...m, widgetName: v } : m);
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setContextMenu(null); }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              {ctxNameError && <div style={{ color: 'var(--red)', fontSize: 10, padding: '0 12px 4px' }}>{ctxNameError}</div>}
+              {/* Rename text (only for widgets that have text prop) */}
+              {contextMenu.hasText && (<>
+                <div className="ctx-header">Text</div>
+                <div className="ctx-rename-row">
+                  <input
+                    value={ctxTextDraft}
+                    onChange={(e) => {
+                      setCtxTextDraft(e.target.value);
+                      updateWidgetProps(contextMenu.widgetId, { text: e.target.value });
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setContextMenu(null); }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </div>
-              ))}
-              {availableEvents.length > 0 && <div className="ctx-sep" />}
+              </>)}
+              {/* Events */}
+              {availableEvents.length > 0 && (<>
+                <div className="ctx-sep" />
+                <div className="ctx-header">Events</div>
+                {availableEvents.map((evt) => (
+                  <div key={evt} className="ctx-item"
+                    onClick={() => {
+                      toggleWidgetEvent(contextMenu.widgetId, evt);
+                      setContextMenu((m) => m ? {
+                        ...m,
+                        widgetEvents: { ...m.widgetEvents, [evt]: !m.widgetEvents[evt] },
+                      } : m);
+                    }}>
+                    <span className={`ctx-check${contextMenu.widgetEvents[evt] ? ' active' : ''}`}>
+                      {contextMenu.widgetEvents[evt] ? '✓' : ' '}
+                    </span>
+                    on_{contextMenu.widgetName}_{evt}
+                  </div>
+                ))}
+              </>)}
+              <div className="ctx-sep" />
               <div className="ctx-item ctx-delete"
                 onClick={() => { removeWidget(contextMenu.widgetId); setContextMenu(null); }}>
                 Delete

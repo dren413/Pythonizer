@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate } from '../utils/codeGenerator';
 import { basenameFromPath } from '../utils/path';
-import { Save, Play, Square, FolderPlus, Moon, Sun } from 'lucide-react';
+import { Save, Play, Square, FolderPlus, Moon, Sun, FlaskConical } from 'lucide-react';
 import iconPng from '../../assets/icon.png';
 
 export default function Toolbar() {
@@ -10,11 +10,13 @@ export default function Toolbar() {
     projectPath, projectName, widgets, windowTitle, canvasSize, windowResizable,
     userCode, extraFiles, isRunning, setProject, loadProject, clearProject,
     appendConsoleOutput, setIsRunning, clearConsole, theme, toggleTheme,
+    expertMode, toggleExpertMode,
   } = useDesignStore();
 
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState('');
   const [showPythonDialog, setShowPythonDialog] = useState(false);
+  const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [pythonPathInput, setPythonPathInput] = useState('');
   const [pythonVersion, setPythonVersion] = useState('Unknown');
   const [pythonSource, setPythonSource] = useState('unknown');
@@ -29,6 +31,8 @@ export default function Toolbar() {
     const offStop = window.electronAPI.onMenuStop(() => handleStop());
     const offPy = window.electronAPI.onMenuPythonInterpreter(() => { void openPythonDialog(); });
     const offOpen = window.electronAPI.onProjectOpened((data) => loadProject(data));
+    const offAbout = window.electronAPI.onMenuAbout?.(() => setShowAboutDialog(true));
+    const offExpert = window.electronAPI.onMenuToggleExpertMode?.(() => toggleExpertMode());
     return () => {
       offNew?.();
       offSave?.();
@@ -36,6 +40,8 @@ export default function Toolbar() {
       offStop?.();
       offPy?.();
       offOpen?.();
+      offAbout?.();
+      offExpert?.();
     };
   }, []);
 
@@ -204,6 +210,13 @@ export default function Toolbar() {
         <button className="tb-btn" onClick={toggleTheme} title="Toggle Theme">
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
+        <button
+          className={`tb-btn${expertMode ? ' tb-expert-on' : ''}`}
+          onClick={toggleExpertMode}
+          title={expertMode ? 'Expert Mode: ON (click to hide gui.py)' : 'Expert Mode: OFF (click to show gui.py)'}
+        >
+          <FlaskConical size={16} />
+        </button>
         <div className="tb-sep" />
         <button className="tb-btn tb-run" onClick={handleRun} disabled={isRunning} title="Run (F5)">
           <Play size={16} />
@@ -254,6 +267,34 @@ export default function Toolbar() {
             <div className="dialog-actions">
               <button onClick={handleSavePython}>Save</button>
               <button onClick={() => setShowPythonDialog(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAboutDialog && (
+        <div className="dialog-overlay" onClick={() => setShowAboutDialog(false)}>
+          <div className="dialog about-dialog" onClick={(e) => e.stopPropagation()} style={{ minWidth: 340, textAlign: 'center' }}>
+            <img src={iconPng} alt="Pythonizer" style={{ width: 72, height: 72, marginBottom: 12, borderRadius: 16 }} />
+            <h3 style={{ marginBottom: 4 }}>Pythonizer</h3>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Version 1.0.4</div>
+            <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>Dren Gashi</div>
+            <a href="mailto:gasdr413@gmail.com"
+              style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', display: 'block', marginBottom: 4 }}
+              onClick={(e) => e.stopPropagation()}>
+              gasdr413@gmail.com
+            </a>
+            <a href="https://github.com/dren413/Pythonizer"
+              target="_blank" rel="noreferrer"
+              style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', display: 'block', marginBottom: 16 }}
+              onClick={(e) => e.stopPropagation()}>
+              github.com/dren413/Pythonizer
+            </a>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
+              A minimalistic Python/tkinter GUI builder for CS students.
+            </div>
+            <div className="dialog-actions" style={{ justifyContent: 'center' }}>
+              <button onClick={() => setShowAboutDialog(false)}>Close</button>
             </div>
           </div>
         </div>

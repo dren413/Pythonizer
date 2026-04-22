@@ -114,8 +114,8 @@ body {
 .tb-run { color: var(--green); }
 .tb-run:hover { background: rgba(166,227,161,0.12); }
 .tb-stop { color: var(--red); }
-.tb-stop:hover { background: rgba(243,139,168,0.12); }
-.tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.tb-stop:hover { background: rgba(243,139,168,0.12); }.tb-expert-on { color: var(--yellow); }
+.tb-expert-on:hover { background: rgba(249,226,175,0.12); }.tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
 
 /* ═══════════════════════════════════════════════════════════
    Main Layout  (left | splitter | center | splitter | right)
@@ -280,7 +280,9 @@ body {
   border: 1px solid transparent;
   border-radius: 3px;
   transition: border-color 0.1s;
+  /* padding-top is handled by adding 14px to rendered height in JSX */
   padding-top: 14px;
+  box-sizing: content-box; /* so height = content height; we add 14px in JSX for the label */
 }
 .canvas-widget:hover { border-color: var(--accent); }
 .canvas-widget.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
@@ -432,6 +434,35 @@ body {
 .ctx-delete { color: var(--red); }
 .ctx-delete:hover { background: rgba(243,139,168,0.1); }
 
+.ctx-header {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.ctx-rename-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 6px;
+}
+
+.ctx-rename-row input {
+  flex: 1;
+  padding: 3px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  outline: none;
+  min-width: 0;
+}
+
 /* ═══════════════════════════════════════════════════════════
    Attribute Inspector
    ═══════════════════════════════════════════════════════════ */
@@ -519,14 +550,46 @@ body {
 .inspector-toggle {
   display: flex !important;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px !important;
   color: var(--text-primary) !important;
   cursor: pointer;
+  margin-top: 2px;
 }
+
+/* Modern CSS toggle switch */
 .inspector-toggle input[type="checkbox"] {
-  width: auto;
-  accent-color: var(--accent);
+  appearance: none;
+  -webkit-appearance: none;
+  width: 30px;
+  min-width: 30px;
+  height: 17px;
+  background: var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.inspector-toggle input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+.inspector-toggle input[type="checkbox"]:checked {
+  background: var(--accent);
+}
+.inspector-toggle input[type="checkbox"]:checked::before {
+  background: #fff;
+  transform: translateX(13px);
 }
 
 .inspector-section {
@@ -570,6 +633,7 @@ body {
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   flex-shrink: 0;
+  position: relative;
 }
 
 .editor-tab {
@@ -625,11 +689,17 @@ body {
 }
 .tab-add-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
+.editor-tabs-spacer {
+  flex: 1;
+}
+
 .editor-zoom-controls {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: 8px;
+  margin-left: 4px;
+  margin-right: 4px;
+  flex-shrink: 0;
 }
 
 .editor-zoom-value {
@@ -681,18 +751,25 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  position: relative;
-  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+/* @uiw/react-codemirror renders a host div between editor-content and .cm-editor */
+.editor-content > div {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .editor-content .cm-editor {
+  flex: 1;
+  min-height: 0;
   height: 100%;
-  overflow: hidden;
 }
 .editor-content .cm-editor .cm-scroller {
-  height: 100%;
   overflow: auto !important;
   overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
 }
 .editor-content .cm-editor .cm-content,
 .editor-content .cm-editor .cm-gutter {

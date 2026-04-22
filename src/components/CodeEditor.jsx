@@ -41,7 +41,7 @@ function buildWidgetCompletionSource(widgets) {
 
 export default function CodeEditor() {
   const {
-    widgets, userCode, activeTab, extraFiles, theme, editorScale,
+    widgets, userCode, activeTab, extraFiles, theme, editorScale, expertMode,
     windowTitle, canvasSize, windowResizable, windowBg,
     setUserCode, setActiveTab, addExtraFile, removeExtraFile, updateExtraFile,
     designUndo, designRedo, setEditorScale, resetEditorScale,
@@ -93,7 +93,10 @@ export default function CodeEditor() {
   const guiPyCode = generateGuiPy(widgets, windowTitle, canvasSize, windowResizable, windowBg);
 
   const extraFileNames = Object.keys(extraFiles);
-  const tabs = ['main.py', 'gui.py', ...extraFileNames];
+  // gui.py is only shown in expert mode
+  const tabs = expertMode
+    ? ['main.py', 'gui.py', ...extraFileNames]
+    : ['main.py', ...extraFileNames];
 
   function getCurrentCode() {
     if (activeTab === 'main.py') return mainPyCode;
@@ -181,6 +184,7 @@ export default function CodeEditor() {
         <button className="tab-add-btn" onClick={() => setShowNewFileInput(true)} title="New file">
           <Plus size={14} />
         </button>
+        <div className="editor-tabs-spacer" />
         <div className="editor-zoom-controls">
           <button className="tab-add-btn" onClick={zoomOut} title="Zoom out">
             <Minus size={14} />

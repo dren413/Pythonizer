@@ -4,6 +4,7 @@ import { basenameFromPath } from '../utils/path';
 let nextId = 1;
 const THEME_STORAGE_KEY = 'pythonizer.theme';
 const EDITOR_SCALE_STORAGE_KEY = 'pythonizer.editorScale';
+const EXPERT_MODE_STORAGE_KEY = 'pythonizer.expertMode';
 
 function getInitialTheme() {
   if (typeof window === 'undefined') return 'dark';
@@ -26,6 +27,16 @@ function getInitialEditorScale() {
 function persistEditorScale(scale) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(EDITOR_SCALE_STORAGE_KEY, String(scale));
+}
+
+function getInitialExpertMode() {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(EXPERT_MODE_STORAGE_KEY) === 'true';
+}
+
+function persistExpertMode(val) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(EXPERT_MODE_STORAGE_KEY, String(val));
 }
 
 export const WIDGET_DEFAULTS = {
@@ -141,6 +152,7 @@ const useDesignStore = create((set, get) => ({
   // ── Theme ──
   theme: getInitialTheme(),
   editorScale: getInitialEditorScale(),
+  expertMode: getInitialExpertMode(),
 
   // ── Console ──
   consoleOutput: '',
@@ -166,6 +178,13 @@ const useDesignStore = create((set, get) => ({
   resetEditorScale: () => {
     persistEditorScale(1);
     set({ editorScale: 1 });
+  },
+  toggleExpertMode: () => {
+    const val = !get().expertMode;
+    persistExpertMode(val);
+    // If turning off expert mode while gui.py is active, switch back to main.py
+    const fix = !val && get().activeTab === 'gui.py' ? { activeTab: 'main.py' } : {};
+    set({ expertMode: val, ...fix });
   },
 
   // ── Project ──

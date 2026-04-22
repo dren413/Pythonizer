@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::menu::{AboutMetadataBuilder, IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -506,20 +506,14 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
     // View
     let toggle_theme = MenuItem::with_id(app, "toggle-theme", "Toggle Dark/Light Mode", true, Some("CmdOrCtrl+Shift+L"))?;
-    let view_items: &[&dyn IsMenuItem<tauri::Wry>] = &[&toggle_theme];
+    let toggle_expert = MenuItem::with_id(app, "toggle-expert", "Toggle Expert Mode", true, Some("CmdOrCtrl+Shift+E"))?;
+    let view_items: &[&dyn IsMenuItem<tauri::Wry>] = &[&toggle_theme, &toggle_expert];
     let view_menu = Submenu::with_id_and_items(app, "view", "View", true, view_items)?;
 
     // macOS app menu
     #[cfg(target_os = "macos")]
     {
-        let about_meta = AboutMetadataBuilder::new()
-            .name(Some("Pythonizer"))
-            .version(Some("1.0.4"))
-            .copyright(Some("\u{00a9} 2025 Dragan"))
-            .website(Some("https://github.com/dren413/pythonizer"))
-            .website_label(Some("GitHub"))
-            .build();
-        let about = PredefinedMenuItem::about(app, Some("About Pythonizer"), Some(about_meta))?;
+        let about = MenuItem::with_id(app, "about", "About Pythonizer", true, None::<&str>)?;
         let services = PredefinedMenuItem::services(app, Some("Services"))?;
         let hide = PredefinedMenuItem::hide(app, Some("Hide Pythonizer"))?;
         let hide_others = PredefinedMenuItem::hide_others(app, Some("Hide Others"))?;
@@ -587,6 +581,8 @@ pub fn run() {
                             "run"                 => "menu-run",
                             "stop"                => "menu-stop",
                             "toggle-theme"        => "menu-toggle-theme",
+                            "toggle-expert"       => "menu-toggle-expert-mode",
+                            "about"               => "menu-about",
                             _ => return,
                         };
                         let _ = app.emit(event_name, ());
