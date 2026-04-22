@@ -20,19 +20,35 @@ export default function App() {
   // ── Close-requested: warn if unsaved (native OS dialog) ──
   useEffect(() => {
     let unlisten;
-    getCurrentWindow().onCloseRequested(async (event) => {
-      if (useDesignStore.getState().isDirty) {
+    let skipConfirm = false;
+
+    const setup = async () => {
+      unlisten = await getCurrentWindow().onCloseRequested(async (event) => {
+        if (skipConfirm) return;           // already confirmed — let it close
+        if (!useDesignStore.getState().isDirty) return; // no changes — let it close
         event.preventDefault();
-        const confirmed = await ask('You have unsaved changes. Close without saving?', {
-          title: 'Unsaved Changes',
-          kind: 'warning',
-        });
-        if (confirmed) {
-          await getCurrentWindow().destroy();
+        try {
+          const ok = await ask('You have unsaved changes. Close without saving?', {
+            title: 'Unsaved Changes',
+            kind: 'warning',
+          });
+          if (ok) {
+            skipConfirm = true;
+            await getCurrentWindow().close(); // re-fires event; skipConfirm bypasses gate
+          }
+        } catch {
+          // dialog failed — force close
+          skipConfirm = true;
+          await getCurrentWindow().close();
         }
-      }
-    }).then((fn) => { unlisten = fn; });
-    return () => { unlisten?.(); };
+      });
+    };
+
+    setup();
+    return () => {
+      skipConfirm = true; // prevent any pending close from showing dialog during teardown
+      unlisten?.();
+    };
   }, []);
 
   useEffect(() => {
