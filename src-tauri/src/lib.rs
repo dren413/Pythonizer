@@ -10,6 +10,20 @@ use serde_json::Value;
 use tauri::menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, State};
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// On Windows, apply CREATE_NO_WINDOW so Python never opens a console window.
+/// On other platforms this is a no-op.
+#[cfg(windows)]
+fn hide_window(cmd: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+}
+#[cfg(not(windows))]
+#[inline(always)]
+fn hide_window(_cmd: &mut Command) {}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -130,6 +144,7 @@ fn validate_python(exec: &PythonExec) -> bool {
     for arg in &exec.pre_args {
         cmd.arg(arg);
     }
+    hide_window(&mut cmd);
     match cmd.args(["-c", "import tkinter; print('ok')"]).output() {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim() == "ok",
         Err(_) => false,
@@ -211,10 +226,10 @@ fn resolve_python(app: &AppHandle) -> (PythonExec, String) {
 fn get_python_info(_app: AppHandle, state: State<'_, AppState>) -> PythonInfo {
     let exec = state.python_exec.lock().unwrap().clone();
     let source = state.python_source.lock().unwrap().clone();
-    let version = Command::new(&exec.command)
-        .args(&exec.pre_args)
-        .arg("--version")
-        .output()
+    let mut ver_cmd = Command::new(&exec.command);
+    ver_cmd.args(&exec.pre_args).arg("--version");
+    hide_window(&mut ver_cmd);
+    let version = ver_cmd.output()
         .map(|o| {
             let s = String::from_utf8_lossy(&o.stdout).to_string()
                 + &String::from_utf8_lossy(&o.stderr);
@@ -332,6 +347,7 @@ fn run_python(app: AppHandle, state: State<'_, AppState>, project_path: String) 
     }
     let mut cmd = Command::new(&exec.command);
     for arg in &exec.pre_args { cmd.arg(arg); }
+    hide_window(&mut cmd);
     cmd.args(["-u", "main.py"])
         .current_dir(&project_path)
         .env("PYTHONUNBUFFERED", "1")
