@@ -259,12 +259,36 @@ body {
   gap: 8px;
 }
 
+/* Windows variant */
+.canvas-titlebar.win {
+  border-radius: 2px 2px 0 0;
+  padding: 0 0 0 10px;
+  background: #f0f0f0;
+}
+
 .titlebar-dots { display: flex; gap: 5px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 .dot.red    { background: #ff5f57; }
 .dot.yellow { background: #febc2e; }
 .dot.green  { background: #28c840; }
 .titlebar-text { font-size: 12px; color: #555; flex: 1; text-align: center; }
+.win-title { font-size: 12px; color: #333; flex: 1; }
+
+/* Windows caption buttons */
+.win-btns { display: flex; height: 28px; margin-left: auto; }
+.win-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  font-size: 11px;
+  color: #333;
+  cursor: default;
+  user-select: none;
+}
+.win-btn:hover { background: rgba(0,0,0,0.08); }
+.win-close:hover { background: #e81123; color: #fff; }
 
 .canvas-body {
   background: var(--bg-canvas);
