@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { ask } from '@tauri-apps/plugin-dialog';
 import useDesignStore from './store/designStore';
 import Toolbar from './components/Toolbar';
 import ComponentPalette from './components/ComponentPalette';
@@ -11,20 +12,24 @@ import './App.css';
 
 export default function App() {
   const theme = useDesignStore((s) => s.theme);
-  const isDirty = useDesignStore((s) => s.isDirty);
-  const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // ── Close-requested: warn if unsaved ──
+  // ── Close-requested: warn if unsaved (native OS dialog) ──
   useEffect(() => {
     let unlisten;
-    getCurrentWindow().onCloseRequested((event) => {
+    getCurrentWindow().onCloseRequested(async (event) => {
       if (useDesignStore.getState().isDirty) {
         event.preventDefault();
-        setShowCloseDialog(true);
+        const confirmed = await ask('You have unsaved changes. Close without saving?', {
+          title: 'Unsaved Changes',
+          kind: 'warning',
+        });
+        if (confirmed) {
+          await getCurrentWindow().destroy();
+        }
       }
     }).then((fn) => { unlisten = fn; });
     return () => { unlisten?.(); };
@@ -92,26 +97,6 @@ export default function App() {
           <CodeEditor />
         </div>
       </div>
-
-      {showCloseDialog && (
-        <div className="dialog-overlay">
-          <div className="dialog" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360, textAlign: 'center' }}>
-            <h3 style={{ marginBottom: 10 }}>Unsaved Changes</h3>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
-              You have unsaved changes. Close anyway?
-            </p>
-            <div className="dialog-actions" style={{ justifyContent: 'center', gap: 8 }}>
-              <button
-                style={{ background: 'var(--red)', color: '#fff', borderColor: 'var(--red)' }}
-                onClick={() => getCurrentWindow().destroy()}
-              >
-                Close without saving
-              </button>
-              <button onClick={() => setShowCloseDialog(false)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -246,7 +246,7 @@ export default function DesignCanvas() {
                     updateWidget(contextMenu.widgetId, { name: v });
                     setContextMenu((m) => m ? { ...m, widgetName: v } : m);
                   }}
-                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') setContextMenu(null); }}
+                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape' || (e.key === 'Enter' && !ctxNameError)) setContextMenu(null); }}
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -261,12 +261,11 @@ export default function DesignCanvas() {
                       setCtxTextDraft(e.target.value);
                       updateWidgetProps(contextMenu.widgetId, { text: e.target.value });
                     }}
-                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') setContextMenu(null); }}
+                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape' || e.key === 'Enter') setContextMenu(null); }}
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
               </>)}
-              {/* Events */}
               {availableEvents.length > 0 && (<>
                 <div className="ctx-sep" />
                 <div className="ctx-header">Events</div>
