@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { basenameFromPath } from '../utils/path';
 
 let nextId = 1;
 const THEME_STORAGE_KEY = 'pythonizer.theme';
@@ -156,7 +157,7 @@ const useDesignStore = create((set, get) => ({
     nextId = maxId + 1;
     set({
       projectPath,
-      projectName: projectData.name || projectPath.split('/').pop(),
+      projectName: projectData.name || basenameFromPath(projectPath),
       widgets: projectData.widgets || [],
       windowTitle: projectData.windowTitle || 'My App',
       canvasSize: projectData.canvasSize || { width: 500, height: 400 },

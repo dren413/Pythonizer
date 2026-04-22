@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate } from '../utils/codeGenerator';
+import { basenameFromPath } from '../utils/path';
 import { Save, Play, Square, FolderPlus } from 'lucide-react';
 import iconPng from '../../assets/icon.png';
 
@@ -23,10 +24,10 @@ export default function Toolbar() {
   useEffect(() => {
     if (!window.electronAPI) return;
     const offNew = window.electronAPI.onMenuNewProject(() => setShowNewDialog(true));
-    const offSave = window.electronAPI.onMenuSaveProject(() => handleSave());
-    const offRun = window.electronAPI.onMenuRun(() => handleRun());
+    const offSave = window.electronAPI.onMenuSaveProject(() => { void handleSave(); });
+    const offRun = window.electronAPI.onMenuRun(() => { void handleRun(); });
     const offStop = window.electronAPI.onMenuStop(() => handleStop());
-    const offPy = window.electronAPI.onMenuPythonInterpreter(() => openPythonDialog());
+    const offPy = window.electronAPI.onMenuPythonInterpreter(() => { void openPythonDialog(); });
     const offOpen = window.electronAPI.onProjectOpened((data) => loadProject(data));
     return () => {
       offNew?.();
@@ -56,29 +57,42 @@ export default function Toolbar() {
 
   async function handleNewProject() {
     if (!window.electronAPI) return;
-    const dir = await window.electronAPI.newProject();
-    if (dir) {
-      clearProject();
-      setProject(dir, newName || dir.split('/').pop());
-      setShowNewDialog(false);
-      setNewName('');
+    try {
+      const dir = await window.electronAPI.newProject();
+      if (dir) {
+        clearProject();
+        setProject(dir, newName || basenameFromPath(dir));
+        setShowNewDialog(false);
+        setNewName('');
+      }
+    } catch (error) {
+      appendConsoleOutput(`Error creating project: ${error.message || String(error)}\n`);
     }
   }
 
   async function openPythonDialog() {
     if (!window.electronAPI) return;
-    const info = await window.electronAPI.getPythonInfo();
-    setPythonPathInput((info && info.command) || '');
-    setPythonVersion((info && info.version) || 'Unknown');
-    setPythonSource((info && info.source) || 'unknown');
-    setPythonError('');
-    setShowPythonDialog(true);
+    try {
+      const info = await window.electronAPI.getPythonInfo();
+      setPythonPathInput((info && info.command) || '');
+      setPythonVersion((info && info.version) || 'Unknown');
+      setPythonSource((info && info.source) || 'unknown');
+      setPythonError('');
+      setShowPythonDialog(true);
+    } catch (error) {
+      setPythonError(error.message || String(error));
+      setShowPythonDialog(true);
+    }
   }
 
   async function handleBrowsePython() {
     if (!window.electronAPI) return;
-    const picked = await window.electronAPI.pickPythonInterpreter();
-    if (picked) setPythonPathInput(picked);
+    try {
+      const picked = await window.electronAPI.pickPythonInterpreter();
+      if (picked) setPythonPathInput(picked);
+    } catch (error) {
+      setPythonError(error.message || String(error));
+    }
   }
 
   async function handleSavePython() {
@@ -88,59 +102,82 @@ export default function Toolbar() {
       setPythonError('Interpreter path cannot be empty.');
       return;
     }
-    const res = await window.electronAPI.setPythonInterpreter({ command });
-    if (!res || !res.ok) {
-      setPythonError((res && res.error) || 'Failed to set interpreter.');
-      return;
+    try {
+      const res = await window.electronAPI.setPythonInterpreter({ command });
+      if (!res || !res.ok) {
+        setPythonError((res && res.error) || 'Failed to set interpreter.');
+        return;
+      }
+      const info = await window.electronAPI.getPythonInfo();
+      setPythonVersion((info && info.version) || 'Unknown');
+      setPythonSource((info && info.source) || 'unknown');
+      setPythonError('');
+      setShowPythonDialog(false);
+    } catch (error) {
+      setPythonError(error.message || String(error));
     }
-    const info = await window.electronAPI.getPythonInfo();
-    setPythonVersion((info && info.version) || 'Unknown');
-    setPythonSource((info && info.source) || 'unknown');
-    setPythonError('');
-    setShowPythonDialog(false);
   }
 
   async function handleResetPython() {
     if (!window.electronAPI) return;
-    const res = await window.electronAPI.resetPythonInterpreter();
-    if (!res || !res.ok) {
-      setPythonError((res && res.error) || 'Failed to reset interpreter.');
-      return;
+    try {
+      const res = await window.electronAPI.resetPythonInterpreter();
+      if (!res || !res.ok) {
+        setPythonError((res && res.error) || 'Failed to reset interpreter.');
+        return;
+      }
+      const info = await window.electronAPI.getPythonInfo();
+      setPythonPathInput((info && info.command) || '');
+      setPythonVersion((info && info.version) || 'Unknown');
+      setPythonSource((info && info.source) || 'unknown');
+      setPythonError('');
+    } catch (error) {
+      setPythonError(error.message || String(error));
     }
-    const info = await window.electronAPI.getPythonInfo();
-    setPythonPathInput((info && info.command) || '');
-    setPythonVersion((info && info.version) || 'Unknown');
-    setPythonSource((info && info.source) || 'unknown');
-    setPythonError('');
   }
 
   async function handleSave() {
     if (!window.electronAPI) return;
     const state = useDesignStore.getState();
     const guiPy = generateGuiPy(state.widgets, state.windowTitle, state.canvasSize, state.windowResizable, state.windowBg);
-    const dir = await window.electronAPI.saveProject({
-      projectPath: state.projectPath,
-      projectJSON: JSON.stringify(state.getProjectData(), null, 2),
-      guiPy,
-      mainPy: state.userCode || generateMainPyTemplate(state.widgets),
-      extraFiles: state.extraFiles,
-    });
-    if (dir && !state.projectPath) {
-      setProject(dir, dir.split('/').pop());
+    try {
+      const dir = await window.electronAPI.saveProject({
+        projectPath: state.projectPath,
+        projectJSON: JSON.stringify(state.getProjectData(), null, 2),
+        guiPy,
+        mainPy: state.userCode || generateMainPyTemplate(state.widgets),
+        extraFiles: state.extraFiles,
+      });
+      if (dir) {
+        setProject(dir, state.projectName || basenameFromPath(dir));
+      }
+      return dir || null;
+    } catch (error) {
+      appendConsoleOutput(`Error saving project: ${error.message || String(error)}\n`);
+      return null;
     }
   }
 
   async function handleRun() {
     if (!window.electronAPI || isRunning) return;
-    await handleSave();
     clearConsole();
+    const savedDir = await handleSave();
     const state = useDesignStore.getState();
-    const result = await window.electronAPI.runPython({ projectPath: state.projectPath });
-    if (result.error) {
-      appendConsoleOutput(`Error: ${result.error}\n`);
-    } else {
-      setIsRunning(true);
-      appendConsoleOutput('── Running… ──\n');
+    const projectPathToRun = state.projectPath || savedDir;
+    if (!projectPathToRun) {
+      appendConsoleOutput('Error: Save the project to a folder before running.\n');
+      return;
+    }
+    try {
+      const result = await window.electronAPI.runPython({ projectPath: projectPathToRun });
+      if (result?.error) {
+        appendConsoleOutput(`Error: ${result.error}\n`);
+      } else {
+        setIsRunning(true);
+        appendConsoleOutput('── Running… ──\n');
+      }
+    } catch (error) {
+      appendConsoleOutput(`Error: ${error.message || String(error)}\n`);
     }
   }
 
