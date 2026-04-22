@@ -882,6 +882,24 @@ body {
   color: var(--text-primary);
 }
 
+/* Reusable secondary button, matches last-child style */
+.dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dialog-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+}
+
 /* ═══════════════════════════════════════════════════════════
    Scrollbar
    ═══════════════════════════════════════════════════════════ */

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate } from '../utils/codeGenerator';
 import { basenameFromPath } from '../utils/path';
@@ -17,6 +18,7 @@ export default function Toolbar() {
   const [newName, setNewName] = useState('');
   const [showPythonDialog, setShowPythonDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
+  const [appVersion, setAppVersion] = useState('');
   const [pythonPathInput, setPythonPathInput] = useState('');
   const [pythonVersion, setPythonVersion] = useState('Unknown');
   const [pythonSource, setPythonSource] = useState('unknown');
@@ -43,6 +45,11 @@ export default function Toolbar() {
       offAbout?.();
       offExpert?.();
     };
+  }, []);
+
+  // ── Fetch app version ──
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
   }, []);
 
   // ── Python output ──
@@ -249,8 +256,8 @@ export default function Toolbar() {
               autoFocus
             />
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button onClick={handleBrowsePython}>Browse…</button>
-              <button onClick={handleResetPython}>Reset Auto/Bundled</button>
+              <button className="dialog-btn" onClick={handleBrowsePython}>Browse…</button>
+              <button className="dialog-btn" onClick={handleResetPython}>Reset Auto/Bundled</button>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
               Source: {pythonSource} | Version: {pythonVersion}
@@ -271,7 +278,7 @@ export default function Toolbar() {
           <div className="dialog about-dialog" onClick={(e) => e.stopPropagation()} style={{ minWidth: 340, textAlign: 'center' }}>
             <img src={iconPng} alt="Pythonizer" style={{ width: 72, height: 72, marginBottom: 12, borderRadius: 16 }} />
             <h3 style={{ marginBottom: 4 }}>Pythonizer</h3>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Version 1.0.7</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Version {appVersion}</div>
             <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>Dren Gashi</div>
             <a href="mailto:gasdr413@gmail.com"
               style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', display: 'block', marginBottom: 4 }}
