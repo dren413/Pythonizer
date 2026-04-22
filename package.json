@@ -1,7 +1,7 @@
 {
   "name": "pythonizer",
   "productName": "Pythonizer",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A minimalistic Python/tkinter GUI builder for students",
   "scripts": {
     "tauri": "tauri",

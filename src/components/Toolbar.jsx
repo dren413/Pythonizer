@@ -143,7 +143,7 @@ export default function Toolbar() {
     try {
       const dir = await window.electronAPI.saveProject({
         projectPath: state.projectPath,
-        projectJSON: JSON.stringify(state.getProjectData(), null, 2),
+        projectJson: JSON.stringify(state.getProjectData(), null, 2),
         guiPy,
         mainPy: state.userCode || generateMainPyTemplate(state.widgets),
         extraFiles: state.extraFiles,
