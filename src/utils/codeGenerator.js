@@ -263,7 +263,7 @@ export function generateGuiPy(widgets, windowTitle, canvasSize, windowResizable,
     L.push('    def setup_pygame(self, frame, width, height):');
     L.push('        """Embed a pygame surface into a tkinter frame.');
     L.push('        Works on Windows and Linux. On macOS pygame opens its own window.');
-    L.push('        Call this from on_start(), then call self._game_loop()."""');
+    L.push('        Call this from on_start().');
     L.push('        import pygame');
     L.push('        if sys.platform in ("win32", "linux", "linux2"):');
     L.push('            frame.update()');
@@ -272,6 +272,10 @@ export function generateGuiPy(widgets, windowTitle, canvasSize, windowResizable,
     L.push('                os.environ["SDL_VIDEODRIVER"] = "x11"');
     L.push('        pygame.init()');
     L.push('        return pygame.display.set_mode((width, height))');
+    L.push('');
+    L.push('    def _run_loop(self):');
+    L.push('        self._game_loop()');
+    L.push('        self.root.after(0, self._run_loop)');
   }
 
   // ── Event handler stubs (so base class doesn't crash if student forgets) ──
@@ -329,7 +333,7 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
   if (onStartBody.length > 0) {
     onStartBody.forEach((line) => L.push(`        ${line}`));
   } else if (hasPygame) {
-    const cn = `self.${firstPygame.name}`;
+    const cn = firstPygame.name;
     L.push(`        # Set up pygame inside the canvas widget (size must match widget dimensions)`);
     L.push(`        self.screen = self.setup_pygame(${cn}, ${firstPygame.width}, ${firstPygame.height})`);
     L.push(`        ${cn}.FPS = 60`);
@@ -337,7 +341,7 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
     L.push('');
     L.push('        # Static drawing here (backgrounds, images etc.)');
     L.push('');
-    L.push('        self._game_loop()');
+    L.push('        self._run_loop()');
   } else {
     L.push('        # Runs automatically when the app starts. Use button1, label1 etc.');
     L.push('        pass');
@@ -361,7 +365,7 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
     if (loopBody.length > 0) {
       loopBody.forEach((line) => L.push(`        ${line}`));
     } else {
-      const cn = `self.${firstPygame.name}`;
+      const cn = firstPygame.name;
       L.push('        # Handle events');
       L.push('        for event in pygame.event.get():');
       L.push('            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:');
@@ -375,9 +379,8 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
       L.push('        self.screen.fill((30, 30, 40))  # background colour');
       L.push('        pygame.display.update()');
       L.push('');
-      L.push('        # Limit FPS and schedule the next frame');
+      L.push('        # Limit FPS');
       L.push(`        ${cn}.clock.tick(${cn}.FPS)`);
-      L.push('        self.root.after(0, self._game_loop)');
     }
   }
 
