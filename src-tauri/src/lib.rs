@@ -495,6 +495,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let new_project = MenuItem::with_id(app, "new-project", "New Project", true, Some("CmdOrCtrl+N"))?;
     let open_project = MenuItem::with_id(app, "open-project", "Open Project…", true, Some("CmdOrCtrl+O"))?;
     let save_project = MenuItem::with_id(app, "save-project", "Save Project", true, Some("CmdOrCtrl+S"))?;
+    let print_code = MenuItem::with_id(app, "print-code", "Print Code...", true, Some("CmdOrCtrl+P"))?;
     let new_file = MenuItem::with_id(app, "new-file", "New File…", true, Some("CmdOrCtrl+Shift+N"))?;
     let python_interp = MenuItem::with_id(app, "python-interpreter", "Python Interpreter…", true, None::<&str>)?;
     let sep_f1 = PredefinedMenuItem::separator(app)?;
@@ -503,7 +504,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let quit = PredefinedMenuItem::quit(app, Some("Quit"))?;
 
     let file_items: &[&dyn IsMenuItem<tauri::Wry>] = &[
-        &new_project, &open_project, &save_project,
+        &new_project, &open_project, &save_project, &print_code,
         &sep_f1, &new_file,
         &sep_f2, &python_interp,
         &sep_f3, &quit,
@@ -609,6 +610,7 @@ pub fn run() {
                             "redo"                => "menu-redo",
                             "run"                 => "menu-run",
                             "stop"                => "menu-stop",
+                            "print-code"          => "menu-print-code",
                             "toggle-theme"        => "menu-toggle-theme",
                             "toggle-expert"       => "menu-toggle-expert-mode",
                             "about"               => "menu-about",

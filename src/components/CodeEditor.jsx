@@ -81,6 +81,23 @@ export default function CodeEditor() {
   }, []);
 
   useEffect(() => {
+    const handlePrint = () => window.print();
+    const offPrint = window.electronAPI?.onMenuPrintCode?.(handlePrint);
+    const onKeyDown = (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key.toLowerCase() !== 'p') return;
+      e.preventDefault();
+      handlePrint();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      offPrint?.();
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     const source = userCode || generateMainPyTemplate(widgets);
     const normalized = enforceMainPyTemplate(source, widgets, userCode);
     if (normalized !== userCode) {

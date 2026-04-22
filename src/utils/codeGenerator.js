@@ -4,10 +4,19 @@ function esc(str) {
 
 function normalizeUserBlockLines(blockText) {
   const lines = String(blockText || '').replace(/\r/g, '').split('\n');
-  const deindented = lines.map((line) => line.replace(/^ {8}/, ''));
-  while (deindented.length && deindented[0].trim() === '') deindented.shift();
-  while (deindented.length && deindented[deindented.length - 1].trim() === '') deindented.pop();
-  return deindented;
+  while (lines.length && lines[0].trim() === '') lines.shift();
+  while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+  if (lines.length === 0) return [];
+
+  const indents = lines
+    .filter((line) => line.trim() !== '')
+    .map((line) => (line.match(/^[ \t]*/) || [''])[0].length);
+  const commonIndent = indents.length > 0 ? Math.min(...indents) : 0;
+
+  return lines.map((line) => {
+    if (line.trim() === '') return '';
+    return line.slice(commonIndent);
+  });
 }
 
 function collectEnabledHandlers(widgets) {
@@ -74,6 +83,27 @@ function addUserBlockLines(L, key, userBlocks, hintComment) {
   } else {
     body.forEach((line) => L.push(`        ${line}`));
   }
+}
+
+function isDefaultPygameLoopBody(lines) {
+  const nonEmpty = lines.filter((line) => line.trim() !== '');
+  const patterns = [
+    /^# Handle events$/,
+    /^for event in pygame\.event\.get\(\):$/,
+    /^if event\.type == pygame\.KEYDOWN and event\.key == pygame\.K_SPACE:$/,
+    /^pass  # keyboard event$/,
+    /^(if|elif) event\.type == pygame\.MOUSEBUTTONDOWN and event\.button == 1:$/,
+    /^pass  # mouse click event$/,
+    /^# Game logic here$/,
+    /^# Draw your scene here$/,
+    /^self\.screen\.fill\(\(30, 30, 40\)\)  # background colour$/,
+    /^pygame\.display\.update\(\)$/,
+    /^# Limit FPS$/,
+    /^[A-Za-z_][A-Za-z0-9_]*\.clock\.tick\([A-Za-z_][A-Za-z0-9_]*\.FPS\)$/,
+  ];
+
+  return nonEmpty.length === patterns.length
+    && patterns.every((pattern, index) => pattern.test(nonEmpty[index]));
 }
 
 // ══════════════════════════════════════════════════════════
@@ -263,7 +293,7 @@ export function generateGuiPy(widgets, windowTitle, canvasSize, windowResizable,
     L.push('    def setup_pygame(self, frame, width, height):');
     L.push('        """Embed a pygame surface into a tkinter frame.');
     L.push('        Works on Windows and Linux. On macOS pygame opens its own window.');
-    L.push('        Call this from on_start().');
+    L.push('        Call this from on_start()."""');
     L.push('        import pygame');
     L.push('        if sys.platform in ("win32", "linux", "linux2"):');
     L.push('            frame.update()');
@@ -362,7 +392,7 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
     L.push('');
     L.push('    def _game_loop(self):');
     const loopBody = normalizeUserBlockLines(userBlocks['_game_loop'] || '');
-    if (loopBody.length > 0) {
+    if (loopBody.length > 0 && !isDefaultPygameLoopBody(loopBody)) {
       loopBody.forEach((line) => L.push(`        ${line}`));
     } else {
       const cn = firstPygame.name;
@@ -370,7 +400,7 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
       L.push('        for event in pygame.event.get():');
       L.push('            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:');
       L.push('                pass  # keyboard event');
-      L.push('            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:');
+      L.push('            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:');
       L.push('                pass  # mouse click event');
       L.push('');
       L.push('        # Game logic here');

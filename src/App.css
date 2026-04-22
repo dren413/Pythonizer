@@ -954,3 +954,109 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root,
+  .app-root,
+  .main-layout,
+  .right-panel,
+  .code-editor,
+  .editor-content,
+  .editor-content > div {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body {
+    overflow: visible !important;
+  }
+
+  .toolbar,
+  .left-panel,
+  .center-panel,
+  .splitter,
+  .tab-add-btn,
+  .editor-tabs-spacer,
+  .editor-zoom-controls,
+  .new-file-bar,
+  .dialog-overlay {
+    display: none !important;
+  }
+
+  .app-root,
+  .main-layout,
+  .right-panel {
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .right-panel {
+    width: auto !important;
+  }
+
+  .editor-tabs {
+    display: block !important;
+    height: auto !important;
+    padding: 0 0 8px !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .editor-tab {
+    display: none !important;
+  }
+
+  .editor-tab.active {
+    display: inline-flex !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    font-weight: 700;
+  }
+
+  .tab-badge,
+  .tab-close {
+    display: none !important;
+  }
+
+  .editor-content .cm-editor,
+  .editor-content .cm-scroller {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .editor-content .cm-gutters {
+    background: #ffffff !important;
+    color: #666666 !important;
+    border-right: 1px solid #dddddd !important;
+  }
+
+  .editor-content .cm-content,
+  .editor-content .cm-line,
+  .editor-content .cm-gutterElement {
+    color: #000000 !important;
+  }
+
+  .editor-content .cm-activeLine,
+  .editor-content .cm-activeLineGutter,
+  .editor-content .cm-selectionBackground {
+    background: transparent !important;
+  }
+
+  .editor-content .cm-cursor,
+  .editor-content .cm-dropCursor {
+    display: none !important;
+  }
+}
