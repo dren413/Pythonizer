@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate } from '../utils/codeGenerator';
 import { basenameFromPath } from '../utils/path';
-import { Save, Play, Square, FolderPlus } from 'lucide-react';
+import { Save, Play, Square, FolderPlus, Moon, Sun } from 'lucide-react';
 import iconPng from '../../assets/icon.png';
 
 export default function Toolbar() {
   const {
     projectPath, projectName, widgets, windowTitle, canvasSize, windowResizable,
     userCode, extraFiles, isRunning, setProject, loadProject, clearProject,
-    appendConsoleOutput, setIsRunning, clearConsole,
+    appendConsoleOutput, setIsRunning, clearConsole, theme, toggleTheme,
   } = useDesignStore();
 
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -200,6 +200,9 @@ export default function Toolbar() {
         </button>
         <button className="tb-btn" onClick={handleSave} title="Save Project">
           <Save size={16} />
+        </button>
+        <button className="tb-btn" onClick={toggleTheme} title="Toggle Theme">
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
         <div className="tb-sep" />
         <button className="tb-btn tb-run" onClick={handleRun} disabled={isRunning} title="Run (F5)">

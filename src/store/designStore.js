@@ -3,6 +3,7 @@ import { basenameFromPath } from '../utils/path';
 
 let nextId = 1;
 const THEME_STORAGE_KEY = 'pythonizer.theme';
+const EDITOR_SCALE_STORAGE_KEY = 'pythonizer.editorScale';
 
 function getInitialTheme() {
   if (typeof window === 'undefined') return 'dark';
@@ -13,6 +14,18 @@ function getInitialTheme() {
 function persistTheme(theme) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+
+function getInitialEditorScale() {
+  if (typeof window === 'undefined') return 1;
+  const savedScale = Number.parseFloat(window.localStorage.getItem(EDITOR_SCALE_STORAGE_KEY) || '');
+  if (!Number.isFinite(savedScale)) return 1;
+  return Math.min(1.8, Math.max(0.75, savedScale));
+}
+
+function persistEditorScale(scale) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(EDITOR_SCALE_STORAGE_KEY, String(scale));
 }
 
 export const WIDGET_DEFAULTS = {
@@ -127,6 +140,7 @@ const useDesignStore = create((set, get) => ({
 
   // ── Theme ──
   theme: getInitialTheme(),
+  editorScale: getInitialEditorScale(),
 
   // ── Console ──
   consoleOutput: '',
@@ -143,6 +157,15 @@ const useDesignStore = create((set, get) => ({
     document.documentElement.setAttribute('data-theme', newTheme);
     persistTheme(newTheme);
     set({ theme: newTheme });
+  },
+  setEditorScale: (scale) => {
+    const clamped = Math.min(1.8, Math.max(0.75, Number(scale) || 1));
+    persistEditorScale(clamped);
+    set({ editorScale: clamped });
+  },
+  resetEditorScale: () => {
+    persistEditorScale(1);
+    set({ editorScale: 1 });
   },
 
   // ── Project ──

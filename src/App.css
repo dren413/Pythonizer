@@ -280,9 +280,26 @@ body {
   border: 1px solid transparent;
   border-radius: 3px;
   transition: border-color 0.1s;
+  padding-top: 14px;
 }
 .canvas-widget:hover { border-color: var(--accent); }
 .canvas-widget.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.widget-code-label {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-muted);
+  opacity: 0.95;
+  pointer-events: none;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  background: color-mix(in srgb, var(--bg-canvas) 88%, transparent);
+  padding: 1px 2px;
+  border-radius: 3px;
+  z-index: 1;
+}
 
 .resize-handle {
   position: absolute;
@@ -608,6 +625,29 @@ body {
 }
 .tab-add-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
+.editor-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.editor-zoom-value {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  min-width: 44px;
+  height: 22px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.editor-zoom-value:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .new-file-bar {
   display: flex;
   gap: 4px;
@@ -650,10 +690,13 @@ body {
 }
 .editor-content .cm-editor .cm-scroller {
   height: 100%;
-  overflow-x: auto;
-  overflow-y: auto !important;
+  overflow: auto !important;
   overscroll-behavior: contain;
   touch-action: pan-x pan-y;
+}
+.editor-content .cm-editor .cm-content,
+.editor-content .cm-editor .cm-gutter {
+  min-height: 100%;
 }
 
 /* ═══════════════════════════════════════════════════════════

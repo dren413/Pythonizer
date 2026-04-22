@@ -7,7 +7,7 @@ import { keymap, EditorView } from '@codemirror/view';
 import { indentWithTab, insertNewlineAndIndent, undo as cmUndo, redo as cmRedo } from '@codemirror/commands';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate, enforceMainPyTemplate } from '../utils/codeGenerator';
-import { Plus, X } from 'lucide-react';
+import { Minus, Plus, X } from 'lucide-react';
 
 function buildWidgetCompletionSource(widgets) {
   const seen = new Set();
@@ -41,16 +41,15 @@ function buildWidgetCompletionSource(widgets) {
 
 export default function CodeEditor() {
   const {
-    widgets, userCode, activeTab, extraFiles, theme,
+    widgets, userCode, activeTab, extraFiles, theme, editorScale,
     windowTitle, canvasSize, windowResizable, windowBg,
     setUserCode, setActiveTab, addExtraFile, removeExtraFile, updateExtraFile,
-    designUndo, designRedo,
+    designUndo, designRedo, setEditorScale, resetEditorScale,
   } = useDesignStore();
 
   const [showNewFileInput, setShowNewFileInput] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const editorViewRef = useRef(null);
-  const editorContentRef = useRef(null);
 
   // ── Menu new file ──
   useEffect(() => {
@@ -118,35 +117,26 @@ export default function CodeEditor() {
     setShowNewFileInput(false);
   }
 
-  function handleEditorWheelCapture(e) {
-    // Preserve browser zoom gestures (trackpad pinch / Cmd/Ctrl+wheel)
-    if (e.ctrlKey || e.metaKey) return;
-
-    const root = editorContentRef.current;
-    const scroller = root ? root.querySelector('.cm-scroller') : null;
-    if (!scroller) return;
-
-    const unit = e.deltaMode === 1 ? 16 : 1; // line mode vs pixel mode
-    const dy = e.deltaY * unit;
-    const dx = e.deltaX * unit;
-
-    let moved = false;
-
-    if (dy !== 0 && scroller.scrollHeight > scroller.clientHeight) {
-      const before = scroller.scrollTop;
-      scroller.scrollTop += dy;
-      moved = moved || scroller.scrollTop !== before;
-    }
-
-    if (dx !== 0 && scroller.scrollWidth > scroller.clientWidth) {
-      const before = scroller.scrollLeft;
-      scroller.scrollLeft += dx;
-      moved = moved || scroller.scrollLeft !== before;
-    }
-
-    if (moved) e.preventDefault();
+  function clampScale(scale) {
+    return Math.min(1.8, Math.max(0.75, Math.round(scale * 20) / 20));
   }
 
+  function zoomIn() {
+    setEditorScale(clampScale(editorScale + 0.1));
+  }
+
+  function zoomOut() {
+    setEditorScale(clampScale(editorScale - 0.1));
+  }
+
+  function handleEditorWheelCapture(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    if (e.deltaY < 0) zoomIn();
+    if (e.deltaY > 0) zoomOut();
+  }
+
+  const fontSizePx = Math.round(13 * editorScale);
   const isReadonly = activeTab === 'gui.py';
   const widgetCompletionSource = useMemo(() => buildWidgetCompletionSource(widgets), [widgets]);
   const extensions = [
@@ -154,9 +144,21 @@ export default function CodeEditor() {
     keymap.of([
       { key: 'Enter', run: insertNewlineAndIndent },
       indentWithTab,
+      { key: 'Mod-=', run: () => { zoomIn(); return true; } },
+      { key: 'Mod-Shift-=', run: () => { zoomIn(); return true; } },
+      { key: 'Mod--', run: () => { zoomOut(); return true; } },
+      { key: 'Mod-0', run: () => { resetEditorScale(); return true; } },
+      { key: 'Ctrl-=', run: () => { zoomIn(); return true; } },
+      { key: 'Ctrl-Shift-=', run: () => { zoomIn(); return true; } },
+      { key: 'Ctrl--', run: () => { zoomOut(); return true; } },
+      { key: 'Ctrl-0', run: () => { resetEditorScale(); return true; } },
     ]),
     autocompletion({ activateOnTyping: true }),
     pythonLanguage.data.of({ autocomplete: widgetCompletionSource }),
+    EditorView.theme({
+      '&': { fontSize: `${fontSizePx}px` },
+      '.cm-gutters': { fontSize: `${fontSizePx}px` },
+    }),
   ];
   if (theme === 'dark') extensions.push(oneDark);
 
@@ -179,6 +181,17 @@ export default function CodeEditor() {
         <button className="tab-add-btn" onClick={() => setShowNewFileInput(true)} title="New file">
           <Plus size={14} />
         </button>
+        <div className="editor-zoom-controls">
+          <button className="tab-add-btn" onClick={zoomOut} title="Zoom out">
+            <Minus size={14} />
+          </button>
+          <button className="editor-zoom-value" onClick={resetEditorScale} title="Reset zoom">
+            {Math.round(editorScale * 100)}%
+          </button>
+          <button className="tab-add-btn" onClick={zoomIn} title="Zoom in">
+            <Plus size={14} />
+          </button>
+        </div>
       </div>
 
       {showNewFileInput && (
@@ -191,7 +204,7 @@ export default function CodeEditor() {
         </div>
       )}
 
-      <div className="editor-content" ref={editorContentRef} onWheelCapture={handleEditorWheelCapture}>
+      <div className="editor-content" onWheelCapture={handleEditorWheelCapture}>
         <CodeMirror
           key={`${activeTab}-${theme}`}
           value={getCurrentCode()}

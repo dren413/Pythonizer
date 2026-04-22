@@ -210,6 +210,7 @@ export default function DesignCanvas() {
               onMouseDown={(e) => handleWidgetMouseDown(e, w)}
               onContextMenu={(e) => handleContextMenu(e, w)}
             >
+              <div className="widget-code-label">{w.name}</div>
               <WidgetPreview widget={w} />
               {w.id === selectedWidgetId && (
                 <div className="resize-handle" onMouseDown={(e) => handleResizeMouseDown(e, w)} />
