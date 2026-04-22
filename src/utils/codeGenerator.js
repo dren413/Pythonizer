@@ -364,7 +364,10 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
       const cn = `self.${firstPygame.name}`;
       L.push('        # Handle events');
       L.push('        for event in pygame.event.get():');
-      L.push('            pass  # e.g. if event.type == pygame.KEYDOWN: ...');
+      L.push('            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:');
+      L.push('                pass  # keyboard event');
+      L.push('            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:');
+      L.push('                pass  # mouse click event');
       L.push('');
       L.push('        # Game logic here');
       L.push('');

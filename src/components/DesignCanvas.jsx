@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import useDesignStore, { WIDGET_EVENTS } from '../store/designStore';
 
-// Detect the host OS from the Tauri WebView user-agent (reliable at runtime)
+const IS_WINDOWS = navigator.userAgent.includes('Windows');
 
 // ── Widget rendering ───────────────────────────────────────
 function WidgetPreview({ widget }) {
@@ -198,11 +198,24 @@ export default function DesignCanvas() {
         style={{ width: canvasSize.width, height: canvasSize.height + 28 }}
       >
         {/* Titlebar */}
-        <div className="canvas-titlebar" onClick={handleCanvasClick}>
-          <span className="titlebar-dots">
-            <span className="dot red" /><span className="dot yellow" /><span className="dot green" />
-          </span>
-          <span className="titlebar-text">{windowTitle}</span>
+        <div className={`canvas-titlebar${IS_WINDOWS ? ' win' : ''}`} onClick={handleCanvasClick}>
+          {IS_WINDOWS ? (
+            <>
+              <span className="titlebar-text win-title">{windowTitle}</span>
+              <span className="win-btns">
+                <span className="win-btn win-min">&#x2013;</span>
+                <span className="win-btn win-max">&#x25A1;</span>
+                <span className="win-btn win-close">&#x2715;</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="titlebar-dots">
+                <span className="dot red" /><span className="dot yellow" /><span className="dot green" />
+              </span>
+              <span className="titlebar-text">{windowTitle}</span>
+            </>
+          )}
         </div>
 
         {/* Canvas body */}
