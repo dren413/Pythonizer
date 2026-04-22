@@ -38,6 +38,13 @@ function WidgetPreview({ widget }) {
         </div>
       );
     }
+    case 'PygameCanvas':
+      return (
+        <div className="preview-pygame">
+          <span className="preview-pygame-icon">🎮</span>
+          <span className="preview-pygame-label">pygame</span>
+        </div>
+      );
     default:
       return <div>{widget.type}</div>;
   }

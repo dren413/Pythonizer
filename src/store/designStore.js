@@ -75,6 +75,10 @@ export const WIDGET_DEFAULTS = {
       tickinterval: '0', resolution: '1', showvalue: true,
     },
   },
+  PygameCanvas: {
+    width: 400, height: 300,
+    props: { bg: '#1e1e2e' },
+  },
 };
 
 export const WIDGET_EVENTS = {
@@ -86,6 +90,7 @@ export const WIDGET_EVENTS = {
   Checkbutton: ['change'],
   Radiobutton: ['change'],
   Scale: ['change'],
+  PygameCanvas: [],
 };
 
 const MAX_HISTORY = 100;

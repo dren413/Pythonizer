@@ -425,6 +425,28 @@ body {
   left: 50%; top: 30%; transform: translateX(-50%);
 }
 
+.preview-pygame {
+  width: 100%;
+  height: 100%;
+  background: #1e1e2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.preview-pygame-icon { font-size: 20px; line-height: 1; }
+.preview-pygame-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.45);
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: lowercase;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
 /* ═══════════════════════════════════════════════════════════
    Context Menu
    ═══════════════════════════════════════════════════════════ */

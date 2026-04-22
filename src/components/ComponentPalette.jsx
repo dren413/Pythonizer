@@ -2,18 +2,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import useDesignStore from '../store/designStore';
 import {
   MousePointerClick, Type, TextCursorInput, FileText,
-  List, CheckSquare, Circle, SlidersHorizontal,
+  List, CheckSquare, Circle, SlidersHorizontal, Gamepad2,
 } from 'lucide-react';
 
 const PALETTE = [
-  { type: 'Button',      icon: MousePointerClick, label: 'Button' },
-  { type: 'Label',       icon: Type,              label: 'Label' },
-  { type: 'Entry',       icon: TextCursorInput,   label: 'Entry' },
-  { type: 'Text',        icon: FileText,          label: 'Text' },
-  { type: 'Listbox',     icon: List,              label: 'Listbox' },
-  { type: 'Checkbutton', icon: CheckSquare,       label: 'Check' },
-  { type: 'Radiobutton', icon: Circle,            label: 'Radio' },
-  { type: 'Scale',       icon: SlidersHorizontal, label: 'Scale' },
+  { type: 'Button',       icon: MousePointerClick, label: 'Button' },
+  { type: 'Label',        icon: Type,              label: 'Label' },
+  { type: 'Entry',        icon: TextCursorInput,   label: 'Entry' },
+  { type: 'Text',         icon: FileText,          label: 'Text' },
+  { type: 'Listbox',      icon: List,              label: 'Listbox' },
+  { type: 'Checkbutton',  icon: CheckSquare,       label: 'Check' },
+  { type: 'Radiobutton',  icon: Circle,            label: 'Radio' },
+  { type: 'Scale',        icon: SlidersHorizontal, label: 'Scale' },
+  { type: 'PygameCanvas', icon: Gamepad2,           label: 'Pygame' },
 ];
 
 export default function ComponentPalette() {
