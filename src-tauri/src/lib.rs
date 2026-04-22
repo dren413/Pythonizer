@@ -426,6 +426,15 @@ fn stop_python(state: State<'_, AppState>) {
     *lock = None;
 }
 
+/// Called from the JS side after the user confirms close.
+/// Uses destroy() which bypasses close-requested and always works.
+#[tauri::command]
+fn force_close(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.destroy();
+    }
+}
+
 // ── Open Project (called from menu handler) ───────────────────────────────────
 
 fn handle_open_project(app: &AppHandle) {
@@ -610,6 +619,18 @@ pub fn run() {
                 }
             });
 
+            // Intercept window close at Rust level — emit to JS so it can check isDirty.
+            // Using prevent_close() + destroy() is more reliable on Windows than JS-level handling.
+            if let Some(main_window) = app.get_webview_window("main") {
+                let h = handle.clone();
+                main_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = h.emit("app-close-requested", ());
+                    }
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -621,6 +642,7 @@ pub fn run() {
             save_project,
             run_python,
             stop_python,
+            force_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");

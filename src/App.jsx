@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { ask } from '@tauri-apps/plugin-dialog';
 import useDesignStore from './store/designStore';
 import Toolbar from './components/Toolbar';
@@ -17,38 +18,25 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // ── Close-requested: warn if unsaved (native OS dialog) ──
+  // ── Close-requested: intercepted in Rust, emits 'app-close-requested' to JS ──
   useEffect(() => {
     let unlisten;
-    let skipConfirm = false;
-
-    const setup = async () => {
-      unlisten = await getCurrentWindow().onCloseRequested(async (event) => {
-        if (skipConfirm) return;           // already confirmed — let it close
-        if (!useDesignStore.getState().isDirty) return; // no changes — let it close
-        event.preventDefault();
-        try {
-          const ok = await ask('You have unsaved changes. Close without saving?', {
-            title: 'Unsaved Changes',
-            kind: 'warning',
-          });
-          if (ok) {
-            skipConfirm = true;
-            await getCurrentWindow().close(); // re-fires event; skipConfirm bypasses gate
-          }
-        } catch {
-          // dialog failed — force close
-          skipConfirm = true;
-          await getCurrentWindow().close();
-        }
-      });
-    };
-
-    setup();
-    return () => {
-      skipConfirm = true; // prevent any pending close from showing dialog during teardown
-      unlisten?.();
-    };
+    listen('app-close-requested', async () => {
+      if (!useDesignStore.getState().isDirty) {
+        await invoke('force_close');
+        return;
+      }
+      try {
+        const ok = await ask('You have unsaved changes. Close without saving?', {
+          title: 'Unsaved Changes',
+          kind: 'warning',
+        });
+        if (ok) await invoke('force_close');
+      } catch {
+        await invoke('force_close');
+      }
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
   }, []);
 
   useEffect(() => {

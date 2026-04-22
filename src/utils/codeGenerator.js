@@ -329,9 +329,14 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
   if (onStartBody.length > 0) {
     onStartBody.forEach((line) => L.push(`        ${line}`));
   } else if (hasPygame) {
-    L.push(`        # Initialize pygame into the canvas frame (size must match widget dimensions)`);
+    L.push(`        # Set up the pygame canvas (width and height must match the widget size)`);
     L.push(`        self.screen = self.setup_pygame(self.${firstPygame.name}, ${firstPygame.width}, ${firstPygame.height})`);
+    L.push('        self.FPS = 60');
     L.push('        self.clock = pygame.time.Clock()');
+    L.push('');
+    L.push('        # Static drawing here (backgrounds etc.)');
+    L.push('');
+    L.push('        # Start the game loop');
     L.push('        self._loop_running = True');
     L.push('        self._game_loop()');
   } else {
@@ -357,17 +362,23 @@ export function generateMainPyTemplate(widgets, userBlocks = {}) {
     if (loopBody.length > 0) {
       loopBody.forEach((line) => L.push(`        ${line}`));
     } else {
-      L.push('        if not getattr(self, "_loop_running", False):');
+      L.push('        if not self._loop_running:');
       L.push('            return');
+      L.push('');
+      L.push('        # Handle events');
       L.push('        for event in pygame.event.get():');
       L.push('            if event.type == pygame.QUIT:');
       L.push('                self._loop_running = False');
-      L.push('                return');
-      L.push('        # ── Draw your scene here ──────────────────');
-      L.push('        self.screen.fill((30, 30, 40))');
-      L.push('        # pygame.draw.circle(self.screen, (255, 80, 80), (100, 100), 30)');
+      L.push('');
+      L.push('        # Game logic here');
+      L.push('');
+      L.push('        # Update the view (draw your scene here)');
+      L.push('        self.screen.fill((30, 30, 40))  # background colour');
       L.push('        pygame.display.flip()');
-      L.push('        self.root.after(16, self._game_loop)  # ~60 FPS');
+      L.push('');
+      L.push('        # Limit the FPS and schedule the next frame');
+      L.push('        self.clock.tick(self.FPS)');
+      L.push('        self.root.after(0, self._game_loop)');
     }
   }
 
