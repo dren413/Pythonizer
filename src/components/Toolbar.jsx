@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate } from '../utils/codeGenerator';
 import { basenameFromPath } from '../utils/path';
-import { Save, Play, Square, FolderPlus, Moon, Sun, FlaskConical } from 'lucide-react';
+import { Save, Play, Square, FolderPlus, Moon, Sun } from 'lucide-react';
 import iconPng from '../../assets/icon.png';
 
 export default function Toolbar() {
@@ -10,7 +10,7 @@ export default function Toolbar() {
     projectPath, projectName, widgets, windowTitle, canvasSize, windowResizable,
     userCode, extraFiles, isRunning, setProject, loadProject, clearProject,
     appendConsoleOutput, setIsRunning, clearConsole, theme, toggleTheme,
-    expertMode, toggleExpertMode,
+    expertMode: _expertMode, toggleExpertMode, markSaved,
   } = useDesignStore();
 
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -156,6 +156,7 @@ export default function Toolbar() {
       });
       if (dir) {
         setProject(dir, state.projectName || basenameFromPath(dir));
+        markSaved();
       }
       return dir || null;
     } catch (error) {
@@ -209,13 +210,6 @@ export default function Toolbar() {
         </button>
         <button className="tb-btn" onClick={toggleTheme} title="Toggle Theme">
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
-        <button
-          className={`tb-btn${expertMode ? ' tb-expert-on' : ''}`}
-          onClick={toggleExpertMode}
-          title={expertMode ? 'Expert Mode: ON (click to hide gui.py)' : 'Expert Mode: OFF (click to show gui.py)'}
-        >
-          <FlaskConical size={16} />
         </button>
         <div className="tb-sep" />
         <button className="tb-btn tb-run" onClick={handleRun} disabled={isRunning} title="Run (F5)">
@@ -277,7 +271,7 @@ export default function Toolbar() {
           <div className="dialog about-dialog" onClick={(e) => e.stopPropagation()} style={{ minWidth: 340, textAlign: 'center' }}>
             <img src={iconPng} alt="Pythonizer" style={{ width: 72, height: 72, marginBottom: 12, borderRadius: 16 }} />
             <h3 style={{ marginBottom: 4 }}>Pythonizer</h3>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Version 1.0.4</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Version 1.0.7</div>
             <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>Dren Gashi</div>
             <a href="mailto:gasdr413@gmail.com"
               style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', display: 'block', marginBottom: 4 }}

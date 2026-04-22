@@ -158,6 +158,10 @@ const useDesignStore = create((set, get) => ({
   consoleOutput: '',
   isRunning: false,
 
+  // ── Dirty flag ──
+  isDirty: false,
+  markSaved: () => set({ isDirty: false }),
+
   // ── Theme ──
   setTheme: (theme) => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -198,6 +202,7 @@ const useDesignStore = create((set, get) => ({
     }
     nextId = maxId + 1;
     set({
+      isDirty: false,
       projectPath,
       projectName: projectData.name || basenameFromPath(projectPath),
       widgets: projectData.widgets || [],
@@ -230,6 +235,7 @@ const useDesignStore = create((set, get) => ({
   clearProject: () => {
     nextId = 1;
     set({
+      isDirty: false,
       projectPath: null, projectName: null,
       widgets: [], selectedWidgetId: null,
       windowTitle: 'My App', windowResizable: false, windowBg: '#ffffff',
@@ -239,10 +245,10 @@ const useDesignStore = create((set, get) => ({
   },
 
   // ── Canvas / window ──
-  setCanvasSize: (size) => set({ canvasSize: size }),
-  setWindowTitle: (title) => { get()._pushHistory(); set({ windowTitle: title }); },
-  setWindowResizable: (r) => { get()._pushHistory(); set({ windowResizable: r }); },
-  setWindowBg: (bg) => { get()._pushHistory(); set({ windowBg: bg }); },
+  setCanvasSize: (size) => set({ canvasSize: size, isDirty: true }),
+  setWindowTitle: (title) => { get()._pushHistory(); set({ windowTitle: title, isDirty: true }); },
+  setWindowResizable: (r) => { get()._pushHistory(); set({ windowResizable: r, isDirty: true }); },
+  setWindowBg: (bg) => { get()._pushHistory(); set({ windowBg: bg, isDirty: true }); },
 
   // ── Widgets ──
   isNameTaken: (name, excludeId) => {
@@ -270,6 +276,7 @@ const useDesignStore = create((set, get) => ({
         events: {},
       }],
       selectedWidgetId: id,
+      isDirty: true,
     }));
   },
 
@@ -280,6 +287,7 @@ const useDesignStore = create((set, get) => ({
   updateWidgetProps: (id, propUpdates) => {
     get()._pushHistory();
     set((s) => ({
+      isDirty: true,
       widgets: s.widgets.map((w) =>
         w.id === id ? { ...w, props: { ...w.props, ...propUpdates } } : w
       ),
@@ -289,6 +297,7 @@ const useDesignStore = create((set, get) => ({
   toggleWidgetEvent: (id, eventName) => {
     get()._pushHistory();
     set((s) => ({
+      isDirty: true,
       widgets: s.widgets.map((w) => {
         if (w.id !== id) return w;
         const events = { ...(w.events || {}) };
@@ -301,6 +310,7 @@ const useDesignStore = create((set, get) => ({
   removeWidget: (id) => {
     get()._pushHistory();
     set((s) => ({
+      isDirty: true,
       widgets: s.widgets.filter((w) => w.id !== id),
       selectedWidgetId: s.selectedWidgetId === id ? null : s.selectedWidgetId,
     }));

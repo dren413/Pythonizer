@@ -1,6 +1,6 @@
 {
   "productName": "Pythonizer",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "identifier": "com.dren413.pythonizer",
   "build": {
     "beforeDevCommand": "npm run dev:vite",

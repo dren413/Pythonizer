@@ -94,7 +94,7 @@ export default function ComponentPalette() {
             className="palette-item"
             onMouseDown={(e) => handleMouseDown(e, type, label)}
           >
-            <Icon size={18} />
+            <Icon size={22} />
             <span>{label}</span>
           </div>
         ))}
