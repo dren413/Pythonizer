@@ -41,6 +41,8 @@ Pythonizer currently focuses on a small, classroom-friendly widget set:
 - `Checkbutton`
 - `Radiobutton`
 - `Scale`
+- `Progressbar` — a ttk progress bar widget, useful for showing task completion or simple loading states
+- `PygameCanvas` — embeds a Pygame drawing surface inside a tkinter window, with a managed game loop and close handling, making it easy to teach game loops alongside standard GUI programming
 
 The app includes:
 

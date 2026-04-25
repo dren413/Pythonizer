@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useDesignStore from '../store/designStore';
 import {
-  MousePointerClick, Type, TextCursorInput, FileText,
-  List, CheckSquare, Circle, SlidersHorizontal, Activity, Gamepad2,
+  RectangleHorizontal, Type, TextCursorInput, FileText,
+  List, CheckSquare, Circle, SlidersHorizontal, Gauge, Gamepad2,
 } from 'lucide-react';
 
 const PALETTE = [
-  { type: 'Button',       icon: MousePointerClick, label: 'Button' },
+  { type: 'Button',       icon: RectangleHorizontal, label: 'Button' },
   { type: 'Label',        icon: Type,              label: 'Label' },
   { type: 'Entry',        icon: TextCursorInput,   label: 'Entry' },
   { type: 'Text',         icon: FileText,          label: 'Text' },
@@ -14,7 +14,7 @@ const PALETTE = [
   { type: 'Checkbutton',  icon: CheckSquare,       label: 'Check' },
   { type: 'Radiobutton',  icon: Circle,            label: 'Radio' },
   { type: 'Scale',        icon: SlidersHorizontal, label: 'Scale' },
-  { type: 'Progressbar',  icon: Activity,          label: 'Progress' },
+  { type: 'Progressbar',  icon: Gauge,             label: 'Progress' },
   { type: 'PygameCanvas', icon: Gamepad2,           label: 'Pygame' },
 ];
 
