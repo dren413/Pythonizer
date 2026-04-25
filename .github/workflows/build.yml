@@ -1,22 +1,22 @@
-name: Build Windows Beta
+name: Build Windows Release
 
 on:
   push:
     branches:
-      - pygame-support
+      - main
     tags:
-      - 'v*-beta*'
+      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: windows-beta-${{ github.ref }}
+  group: windows-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-windows-beta:
+  build-windows:
     runs-on: windows-latest
 
     steps:
@@ -49,9 +49,9 @@ jobs:
         with:
           args: --target x86_64-pc-windows-msvc --bundles nsis
           uploadWorkflowArtifacts: true
-          workflowArtifactNamePattern: pythonizer-beta-[version]-[platform]-[arch]-[bundle]
+          workflowArtifactNamePattern: pythonizer-[version]-[platform]-[arch]-[bundle]
 
-      - name: Build and publish tagged beta release
+      - name: Build and publish tagged release
         if: startsWith(github.ref, 'refs/tags/')
         uses: tauri-apps/tauri-action@v0
         env:
@@ -59,7 +59,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Pythonizer ${{ github.ref_name }}
-          releaseBody: Windows beta build generated from the pygame-support branch.
+          releaseBody: Windows NSIS installer release.
           releaseDraft: false
-          prerelease: true
+          prerelease: false
           args: --target x86_64-pc-windows-msvc --bundles nsis
