@@ -1,7 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import useDesignStore, { WIDGET_EVENTS } from '../store/designStore';
 
-// Detect the host OS from the Tauri WebView user-agent (reliable at runtime)
 const IS_WINDOWS = navigator.userAgent.includes('Windows');
 
 // ── Widget rendering ───────────────────────────────────────
@@ -38,9 +37,30 @@ function WidgetPreview({ widget }) {
         </div>
       );
     }
+    case 'Progressbar': {
+      const isVertical = widget.props.orient === 'vertical';
+      const maximumRaw = Number.parseFloat(widget.props.maximum);
+      const maximum = Number.isFinite(maximumRaw) && maximumRaw > 0 ? maximumRaw : 100;
+      const valueRaw = Number.parseFloat(widget.props.value);
+      const value = Number.isFinite(valueRaw) ? Math.min(maximum, Math.max(0, valueRaw)) : 0;
+      const percent = `${Math.round((value / maximum) * 100)}%`;
+      return (
+        <div
+          className={`preview-progressbar${isVertical ? ' vertical' : ''}${disabledClass}`}
+          style={{ backgroundColor: widget.props.bg || '#e0e0e0' }}
+        >
+          <div
+            className="progressbar-fill"
+            style={isVertical
+              ? { height: percent, backgroundColor: widget.props.fill || '#2f80ed' }
+              : { width: percent, backgroundColor: widget.props.fill || '#2f80ed' }}
+          />
+        </div>
+      );
+    }
     case 'PygameCanvas':
       return (
-        <div className="preview-pygame">
+        <div className="preview-pygame" style={{ backgroundColor: widget.props.bg || '#1e1e2e' }}>
           <span className="preview-pygame-icon">🎮</span>
           <span className="preview-pygame-label">pygame</span>
         </div>
@@ -67,6 +87,10 @@ export default function DesignCanvas() {
   const [ctxTextDraft, setCtxTextDraft] = useState('');
   const [ctxNameError, setCtxNameError] = useState(null);
 
+  const isFullscreenPygame = (widget) => (
+    widget.type === 'PygameCanvas' && widget.props?.fullscreen
+  );
+
   // ── Drop from palette ──
   function handleDrop(e) {
     e.preventDefault();
@@ -82,6 +106,7 @@ export default function DesignCanvas() {
     e.stopPropagation();
     selectWidget(widget.id);
     setContextMenu(null);
+    if (isFullscreenPygame(widget)) return;
     _pushHistory();
     const rect = canvasRef.current.getBoundingClientRect();
     setDragging({
@@ -95,6 +120,7 @@ export default function DesignCanvas() {
   function handleResizeMouseDown(e, widget) {
     e.stopPropagation();
     e.preventDefault();
+    if (isFullscreenPygame(widget)) return;
     _pushHistory();
     setResizing({
       id: widget.id,
@@ -229,25 +255,29 @@ export default function DesignCanvas() {
           onClick={handleCanvasClick}
           onKeyDown={handleKeyDown}
         >
-          {widgets.map((w) => (
-            <div key={w.id}
-              className={`canvas-widget${w.id === selectedWidgetId ? ' selected' : ''}`}
-              style={{
-                left: w.x, top: w.y,
-                width: w.width,
-                height: w.height,
-                backgroundColor: w.props.bg || undefined,
-              }}
-              onMouseDown={(e) => handleWidgetMouseDown(e, w)}
-              onContextMenu={(e) => handleContextMenu(e, w)}
-            >
-              <div className="widget-code-label">{w.name}</div>
-              <WidgetPreview widget={w} />
-              {w.id === selectedWidgetId && (
-                <div className="resize-handle" onMouseDown={(e) => handleResizeMouseDown(e, w)} />
-              )}
-            </div>
-          ))}
+          {widgets.map((w) => {
+            const fullscreenPygame = isFullscreenPygame(w);
+            return (
+              <div key={w.id}
+                className={`canvas-widget${fullscreenPygame ? ' fullscreen-widget' : ''}${w.id === selectedWidgetId ? ' selected' : ''}`}
+                style={{
+                  left: fullscreenPygame ? 0 : w.x,
+                  top: fullscreenPygame ? 0 : w.y,
+                  width: fullscreenPygame ? canvasSize.width : w.width,
+                  height: fullscreenPygame ? canvasSize.height : w.height,
+                  backgroundColor: w.props.bg || undefined,
+                }}
+                onMouseDown={(e) => handleWidgetMouseDown(e, w)}
+                onContextMenu={(e) => handleContextMenu(e, w)}
+              >
+                <div className="widget-code-label">{w.name}</div>
+                <WidgetPreview widget={w} />
+                {w.id === selectedWidgetId && !fullscreenPygame && (
+                  <div className="resize-handle" onMouseDown={(e) => handleResizeMouseDown(e, w)} />
+                )}
+              </div>
+            );
+          })}
 
           {/* Context menu */}
           {contextMenu && (

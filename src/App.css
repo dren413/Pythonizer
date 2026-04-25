@@ -56,6 +56,19 @@ body {
   height: 100vh;
   background: var(--bg-primary);
   color: var(--text-primary);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.app-root input,
+.app-root textarea,
+.app-root select,
+.code-editor,
+.code-editor *,
+.console-body,
+.console-body * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -271,8 +284,8 @@ body {
 .dot.red    { background: #ff5f57; }
 .dot.yellow { background: #febc2e; }
 .dot.green  { background: #28c840; }
-.titlebar-text { font-size: 12px; color: #555; flex: 1; text-align: center; }
-.win-title { font-size: 12px; color: #333; flex: 1; }
+.titlebar-text { font-size: 12px; color: #555; text-align: left; }
+.win-title { font-size: 12px; color: #333; }
 
 /* Windows caption buttons */
 .win-btns { display: flex; height: 28px; margin-left: auto; }
@@ -290,8 +303,14 @@ body {
 .win-btn:hover { background: rgba(0,0,0,0.08); }
 .win-close:hover { background: #e81123; color: #fff; }
 
+
 .canvas-body {
   background: var(--bg-canvas);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--text-muted) 34%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 16px 16px;
   position: relative;
   outline: none;
   overflow: hidden;
@@ -309,6 +328,11 @@ body {
 }
 .canvas-widget:hover { border-color: var(--accent); }
 .canvas-widget.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.canvas-widget.fullscreen-widget {
+  padding-top: 0;
+  box-sizing: border-box;
+  cursor: default;
+}
 
 .widget-code-label {
   position: absolute;
@@ -423,6 +447,26 @@ body {
 }
 .preview-scale.vertical .scale-thumb {
   left: 50%; top: 30%; transform: translateX(-50%);
+}
+
+.preview-progressbar {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.preview-progressbar .progressbar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+.preview-progressbar.vertical .progressbar-fill {
+  top: auto;
+  right: 0;
+  width: 100%;
 }
 
 .preview-pygame {
@@ -578,18 +622,28 @@ body {
   border-radius: 5px;
 }
 
-.color-hex {
+.rgb-fields {
   flex: 1;
-  height: 28px;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.rgb-field {
+  display: flex !important;
   align-items: center;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  gap: 3px;
+  margin: 0 !important;
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+}
+
+.rgb-field input {
+  min-width: 0;
+  height: 28px;
+  padding: 4px !important;
+  text-align: center;
   font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
 }
 
 .inspector-toggle {
@@ -953,3 +1007,109 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root,
+  .app-root,
+  .main-layout,
+  .right-panel,
+  .code-editor,
+  .editor-content,
+  .editor-content > div {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body {
+    overflow: visible !important;
+  }
+
+  .toolbar,
+  .left-panel,
+  .center-panel,
+  .splitter,
+  .tab-add-btn,
+  .editor-tabs-spacer,
+  .editor-zoom-controls,
+  .new-file-bar,
+  .dialog-overlay {
+    display: none !important;
+  }
+
+  .app-root,
+  .main-layout,
+  .right-panel {
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .right-panel {
+    width: auto !important;
+  }
+
+  .editor-tabs {
+    display: block !important;
+    height: auto !important;
+    padding: 0 0 8px !important;
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .editor-tab {
+    display: none !important;
+  }
+
+  .editor-tab.active {
+    display: inline-flex !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    font-weight: 700;
+  }
+
+  .tab-badge,
+  .tab-close {
+    display: none !important;
+  }
+
+  .editor-content .cm-editor,
+  .editor-content .cm-scroller {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .editor-content .cm-gutters {
+    background: #ffffff !important;
+    color: #666666 !important;
+    border-right: 1px solid #dddddd !important;
+  }
+
+  .editor-content .cm-content,
+  .editor-content .cm-line,
+  .editor-content .cm-gutterElement {
+    color: #000000 !important;
+  }
+
+  .editor-content .cm-activeLine,
+  .editor-content .cm-activeLineGutter,
+  .editor-content .cm-selectionBackground {
+    background: transparent !important;
+  }
+
+  .editor-content .cm-cursor,
+  .editor-content .cm-dropCursor {
+    display: none !important;
+  }
+}

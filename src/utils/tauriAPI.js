@@ -12,7 +12,10 @@ function onEvent(eventName, cb) {
 
 const tauriAPI = {
   // ── Project ──────────────────────────────────────────────────────────────
-  newProject: () => invoke('new_project'),
+  newProject: (data) => invoke('new_project', {
+    projectName: data.projectName,
+    parentDir: data.parentDir,
+  }),
   openProject: () => {},  // open is driven by the menu (Rust emits project-opened)
   saveProject: (data) => invoke('save_project', { args: data }),
 
@@ -31,6 +34,7 @@ const tauriAPI = {
   onMenuSaveProject:       (cb) => onEvent('menu-save-project',       cb),
   onMenuRun:               (cb) => onEvent('menu-run',                cb),
   onMenuStop:              (cb) => onEvent('menu-stop',               cb),
+  onMenuPrintCode:         (cb) => onEvent('menu-print-code',         cb),
   onMenuToggleTheme:       (cb) => onEvent('menu-toggle-theme',       cb),
   onMenuToggleExpertMode:  (cb) => onEvent('menu-toggle-expert-mode', cb),
   onMenuAbout:             (cb) => onEvent('menu-about',              cb),

@@ -108,6 +108,18 @@ struct SaveProjectArgs {
     extra_files: Option<HashMap<String, String>>,
 }
 
+fn sanitize_project_name(name: &str) -> String {
+    name.trim()
+        .chars()
+        .map(|ch| match ch {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            _ => ch,
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 // ── App State ─────────────────────────────────────────────────────────────────
 
 pub struct AppState {
@@ -145,10 +157,54 @@ fn validate_python(exec: &PythonExec) -> bool {
         cmd.arg(arg);
     }
     hide_window(&mut cmd);
-    match cmd.args(["-c", "import tkinter; print('ok')"]).output() {
+    let check = r#"
+import sys
+import tkinter
+
+if sys.platform == "darwin" and float(tkinter.TkVersion) < 8.6:
+    raise SystemExit("macOS requires Python with Tcl/Tk 8.6 or newer")
+
+print("ok")
+"#;
+    match cmd.args(["-c", check]).output() {
         Ok(o) => String::from_utf8_lossy(&o.stdout).trim() == "ok",
         Err(_) => false,
     }
+}
+
+fn can_import_python_module(exec: &PythonExec, module: &str) -> bool {
+    let mut cmd = Command::new(&exec.command);
+    for arg in &exec.pre_args {
+        cmd.arg(arg);
+    }
+    hide_window(&mut cmd);
+    cmd.env("PYGAME_HIDE_SUPPORT_PROMPT", "1");
+    cmd.args(["-c", &format!("import {module}")])
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+fn project_uses_pygame(project_path: &str) -> bool {
+    let project_file = Path::new(project_path).join("project.json");
+    let Ok(contents) = fs::read_to_string(project_file) else {
+        return false;
+    };
+    let Ok(project_data) = serde_json::from_str::<Value>(&contents) else {
+        return false;
+    };
+    project_data
+        .get("widgets")
+        .and_then(|widgets| widgets.as_array())
+        .map(|widgets| {
+            widgets.iter().any(|widget| {
+                widget
+                    .get("type")
+                    .and_then(|kind| kind.as_str())
+                    == Some("PygameCanvas")
+            })
+        })
+        .unwrap_or(false)
 }
 
 fn bundled_candidates(app: &AppHandle) -> Vec<PythonExec> {
@@ -283,24 +339,34 @@ fn reset_python_interpreter(app: AppHandle, state: State<'_, AppState>) -> Pytho
 }
 
 #[tauri::command]
-fn new_project(app: AppHandle) -> Option<String> {
-    use tauri_plugin_dialog::DialogExt;
-    let dir = app.dialog()
-        .file()
-        .set_title("Choose folder for new project")
-        .blocking_pick_folder()
-        .and_then(|f| f.into_path().ok())?;
+fn new_project(project_name: String, parent_dir: String) -> Result<String, String> {
+    let project_name = sanitize_project_name(&project_name);
+    if project_name.is_empty() {
+        return Err("Project name cannot be empty.".into());
+    }
+    if parent_dir.trim().is_empty() {
+        return Err("Project location cannot be empty.".into());
+    }
+
+    let dir = Path::new(&parent_dir).join(&project_name);
+    if dir.exists() {
+        return Err(format!("A folder named '{project_name}' already exists in the selected location."));
+    }
+
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create project folder: {e}"))?;
     let project_json = serde_json::json!({
-        "version": 1, "widgets": [], "windowTitle": "My App",
+        "version": 1, "name": project_name, "widgets": [], "windowTitle": "My App",
         "canvasSize": {"width": 500, "height": 400},
         "windowResizable": false, "extraFileNames": []
     });
-    fs::write(dir.join("project.json"), serde_json::to_string_pretty(&project_json).ok()?).ok()?;
-    fs::write(dir.join("gui.py"), "# Auto-generated\n").ok()?;
+    fs::write(dir.join("project.json"), serde_json::to_string_pretty(&project_json).map_err(|e| e.to_string())?)
+        .map_err(|e| format!("Failed to write project.json: {e}"))?;
+    fs::write(dir.join("gui.py"), "# Auto-generated\n")
+        .map_err(|e| format!("Failed to write gui.py: {e}"))?;
     fs::write(dir.join("main.py"),
         "from gui import AppGUI, run\n\n\nclass App(AppGUI):\n\n    def on_start(self):\n        pass\n\n\nrun(App)\n"
-    ).ok()?;
-    Some(dir.to_string_lossy().into_owned())
+    ).map_err(|e| format!("Failed to write main.py: {e}"))?;
+    Ok(dir.to_string_lossy().into_owned())
 }
 
 #[tauri::command]
@@ -345,12 +411,19 @@ fn run_python(app: AppHandle, state: State<'_, AppState>, project_path: String) 
             "No valid Python with tkinter found. Use File > Python Interpreter… to configure one.",
         );
     }
+    if project_uses_pygame(&project_path) && !can_import_python_module(&exec, "pygame") {
+        return RunResult::err(format!(
+            "This project uses a pygame canvas, but the selected Python interpreter ({}) cannot import pygame. Install pygame for that interpreter, or choose another one in File > Python Interpreter….",
+            exec.format()
+        ));
+    }
     let mut cmd = Command::new(&exec.command);
     for arg in &exec.pre_args { cmd.arg(arg); }
     hide_window(&mut cmd);
     cmd.args(["-u", "main.py"])
         .current_dir(&project_path)
         .env("PYTHONUNBUFFERED", "1")
+        .env("PYGAME_HIDE_SUPPORT_PROMPT", "1")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -426,6 +499,15 @@ fn stop_python(state: State<'_, AppState>) {
     *lock = None;
 }
 
+/// Called from the JS side after the user confirms close.
+/// Uses destroy() which bypasses close-requested and always works.
+#[tauri::command]
+fn force_close(app: AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.destroy();
+    }
+}
+
 // ── Open Project (called from menu handler) ───────────────────────────────────
 
 fn handle_open_project(app: &AppHandle) {
@@ -486,6 +568,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let new_project = MenuItem::with_id(app, "new-project", "New Project", true, Some("CmdOrCtrl+N"))?;
     let open_project = MenuItem::with_id(app, "open-project", "Open Project…", true, Some("CmdOrCtrl+O"))?;
     let save_project = MenuItem::with_id(app, "save-project", "Save Project", true, Some("CmdOrCtrl+S"))?;
+    let print_code = MenuItem::with_id(app, "print-code", "Print Code...", true, Some("CmdOrCtrl+P"))?;
     let new_file = MenuItem::with_id(app, "new-file", "New File…", true, Some("CmdOrCtrl+Shift+N"))?;
     let python_interp = MenuItem::with_id(app, "python-interpreter", "Python Interpreter…", true, None::<&str>)?;
     let sep_f1 = PredefinedMenuItem::separator(app)?;
@@ -494,7 +577,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let quit = PredefinedMenuItem::quit(app, Some("Quit"))?;
 
     let file_items: &[&dyn IsMenuItem<tauri::Wry>] = &[
-        &new_project, &open_project, &save_project,
+        &new_project, &open_project, &save_project, &print_code,
         &sep_f1, &new_file,
         &sep_f2, &python_interp,
         &sep_f3, &quit,
@@ -600,6 +683,7 @@ pub fn run() {
                             "redo"                => "menu-redo",
                             "run"                 => "menu-run",
                             "stop"                => "menu-stop",
+                            "print-code"          => "menu-print-code",
                             "toggle-theme"        => "menu-toggle-theme",
                             "toggle-expert"       => "menu-toggle-expert-mode",
                             "about"               => "menu-about",
@@ -609,6 +693,18 @@ pub fn run() {
                     }
                 }
             });
+
+            // Intercept window close at Rust level — emit to JS so it can check isDirty.
+            // Using prevent_close() + destroy() is more reliable on Windows than JS-level handling.
+            if let Some(main_window) = app.get_webview_window("main") {
+                let h = handle.clone();
+                main_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = h.emit("app-close-requested", ());
+                    }
+                });
+            }
 
             Ok(())
         })
@@ -621,6 +717,7 @@ pub fn run() {
             save_project,
             run_python,
             stop_python,
+            force_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");

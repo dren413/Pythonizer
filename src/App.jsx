@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import useDesignStore from './store/designStore';
 import Toolbar from './components/Toolbar';
 import ComponentPalette from './components/ComponentPalette';
@@ -12,28 +12,47 @@ import './App.css';
 
 export default function App() {
   const theme = useDesignStore((s) => s.theme);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [isClosingAfterSave, setIsClosingAfterSave] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // ── Close-requested: warn if unsaved (native OS dialog) ──
+  // ── Close-requested: intercepted in Rust, emits 'app-close-requested' to JS ──
   useEffect(() => {
     let unlisten;
-    getCurrentWindow().onCloseRequested(async (event) => {
-      if (useDesignStore.getState().isDirty) {
-        event.preventDefault();
-        const confirmed = await ask('You have unsaved changes. Close without saving?', {
-          title: 'Unsaved Changes',
-          kind: 'warning',
-        });
-        if (confirmed) {
-          await getCurrentWindow().destroy();
-        }
+    listen('app-close-requested', async () => {
+      if (!useDesignStore.getState().isDirty) {
+        await invoke('force_close');
+        return;
       }
+      setShowCloseDialog(true);
     }).then((fn) => { unlisten = fn; });
     return () => { unlisten?.(); };
   }, []);
+
+  function requestSave() {
+    return new Promise((resolve) => {
+      window.dispatchEvent(new CustomEvent('pythonizer-request-save', {
+        detail: { resolve },
+      }));
+    });
+  }
+
+  async function handleCloseSave() {
+    setIsClosingAfterSave(true);
+    try {
+      const ok = await requestSave();
+      if (ok) {
+        await invoke('force_close');
+      } else {
+        setShowCloseDialog(false);
+      }
+    } finally {
+      setIsClosingAfterSave(false);
+    }
+  }
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -97,6 +116,28 @@ export default function App() {
           <CodeEditor />
         </div>
       </div>
+
+      {showCloseDialog && (
+        <div className="dialog-overlay" onClick={() => !isClosingAfterSave && setShowCloseDialog(false)}>
+          <div className="dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>Unsaved Changes</h3>
+            <label style={{ marginBottom: 12 }}>
+              Save your changes before closing?
+            </label>
+            <div className="dialog-actions">
+              <button onClick={() => void handleCloseSave()} disabled={isClosingAfterSave}>
+                {isClosingAfterSave ? 'Saving…' : 'Save'}
+              </button>
+              <button className="dialog-btn" onClick={() => void invoke('force_close')} disabled={isClosingAfterSave}>
+                Don&apos;t Save
+              </button>
+              <button className="dialog-btn" onClick={() => setShowCloseDialog(false)} disabled={isClosingAfterSave}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

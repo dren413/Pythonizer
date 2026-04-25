@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
+import { open } from '@tauri-apps/plugin-dialog';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate } from '../utils/codeGenerator';
 import { basenameFromPath } from '../utils/path';
@@ -16,6 +17,8 @@ export default function Toolbar() {
 
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [newName, setNewName] = useState('');
+  const [projectDialogMode, setProjectDialogMode] = useState('new');
+  const [projectDialogError, setProjectDialogError] = useState('');
   const [showPythonDialog, setShowPythonDialog] = useState(false);
   const [showAboutDialog, setShowAboutDialog] = useState(false);
   const [appVersion, setAppVersion] = useState('');
@@ -23,11 +26,13 @@ export default function Toolbar() {
   const [pythonVersion, setPythonVersion] = useState('Unknown');
   const [pythonSource, setPythonSource] = useState('unknown');
   const [pythonError, setPythonError] = useState('');
+  const pendingSaveResolverRef = useRef(null);
+  const handleSaveRef = useRef(null);
 
   // ── Menu listeners ──
   useEffect(() => {
     if (!window.electronAPI) return;
-    const offNew = window.electronAPI.onMenuNewProject(() => setShowNewDialog(true));
+    const offNew = window.electronAPI.onMenuNewProject(() => openProjectDialog('new'));
     const offSave = window.electronAPI.onMenuSaveProject(() => { void handleSave(); });
     const offRun = window.electronAPI.onMenuRun(() => { void handleRun(); });
     const offStop = window.electronAPI.onMenuStop(() => handleStop());
@@ -45,6 +50,15 @@ export default function Toolbar() {
       offAbout?.();
       offExpert?.();
     };
+  }, []);
+
+  useEffect(() => {
+    const onRequestSave = async (event) => {
+      const ok = await handleSaveRef.current?.();
+      event.detail?.resolve?.(!!ok);
+    };
+    window.addEventListener('pythonizer-request-save', onRequestSave);
+    return () => window.removeEventListener('pythonizer-request-save', onRequestSave);
   }, []);
 
   // ── Fetch app version ──
@@ -68,19 +82,73 @@ export default function Toolbar() {
     };
   }, []);
 
+  function openProjectDialog(mode) {
+    setProjectDialogMode(mode);
+    setProjectDialogError('');
+    setNewName(mode === 'save' ? (useDesignStore.getState().projectName || '') : '');
+    setShowNewDialog(true);
+  }
+
+  function closeProjectDialog(result = false) {
+    const mode = projectDialogMode;
+    setShowNewDialog(false);
+    setProjectDialogError('');
+    setNewName('');
+    if (mode === 'save' && pendingSaveResolverRef.current) {
+      pendingSaveResolverRef.current(result);
+      pendingSaveResolverRef.current = null;
+    }
+  }
+
+  async function chooseParentDirectory(title) {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title,
+    });
+    return typeof selected === 'string' ? selected : null;
+  }
+
   async function handleNewProject() {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) return null;
+    const projectName = newName.trim();
+    if (!projectName) {
+      setProjectDialogError('Project name cannot be empty.');
+      return null;
+    }
     try {
-      const dir = await window.electronAPI.newProject();
+      const parentDir = await chooseParentDirectory(
+        projectDialogMode === 'new'
+          ? 'Choose location for new project'
+          : 'Choose location to save project',
+      );
+      if (!parentDir) {
+        return null;
+      }
+
+      const dir = await window.electronAPI.newProject({ projectName, parentDir });
       if (dir) {
-        clearProject();
-        setProject(dir, newName || basenameFromPath(dir));
-        setShowNewDialog(false);
-        setNewName('');
+        if (projectDialogMode === 'new') {
+          clearProject();
+          setProject(dir, projectName);
+          markSaved();
+          closeProjectDialog(true);
+          return dir;
+        }
+
+        const savedDir = await persistProject(dir, projectName);
+        closeProjectDialog(!!savedDir);
+        return savedDir;
       }
     } catch (error) {
-      appendConsoleOutput(`Error creating project: ${error.message || String(error)}\n`);
+      const message = error.message || String(error);
+      if (message === 'Project creation was cancelled.') {
+        return null;
+      }
+      setProjectDialogError(message);
+      appendConsoleOutput(`Error creating project: ${message}\n`);
     }
+    return null;
   }
 
   async function openPythonDialog() {
@@ -149,20 +217,20 @@ export default function Toolbar() {
     }
   }
 
-  async function handleSave() {
+  async function persistProject(projectPathOverride = null, projectNameOverride = null) {
     if (!window.electronAPI) return;
     const state = useDesignStore.getState();
     const guiPy = generateGuiPy(state.widgets, state.windowTitle, state.canvasSize, state.windowResizable, state.windowBg);
     try {
       const dir = await window.electronAPI.saveProject({
-        projectPath: state.projectPath,
+        projectPath: projectPathOverride ?? state.projectPath,
         projectJson: JSON.stringify(state.getProjectData(), null, 2),
         guiPy,
         mainPy: state.userCode || generateMainPyTemplate(state.widgets),
         extraFiles: state.extraFiles,
       });
       if (dir) {
-        setProject(dir, state.projectName || basenameFromPath(dir));
+        setProject(dir, projectNameOverride || state.projectName || basenameFromPath(dir));
         markSaved();
       }
       return dir || null;
@@ -171,6 +239,20 @@ export default function Toolbar() {
       return null;
     }
   }
+
+  async function handleSave() {
+    if (!window.electronAPI) return null;
+    const state = useDesignStore.getState();
+    if (state.projectPath) {
+      return persistProject();
+    }
+
+    return new Promise((resolve) => {
+      pendingSaveResolverRef.current = resolve;
+      openProjectDialog('save');
+    });
+  }
+  handleSaveRef.current = handleSave;
 
   async function handleRun() {
     if (!window.electronAPI || isRunning) return;
@@ -209,7 +291,7 @@ export default function Toolbar() {
         {projectName && <span className="toolbar-project">— {projectName}</span>}
       </div>
       <div className="toolbar-right">
-        <button className="tb-btn" onClick={() => setShowNewDialog(true)} title="New Project">
+        <button className="tb-btn" onClick={() => openProjectDialog('new')} title="New Project">
           <FolderPlus size={16} />
         </button>
         <button className="tb-btn" onClick={handleSave} title="Save Project">
@@ -228,16 +310,23 @@ export default function Toolbar() {
       </div>
 
       {showNewDialog && (
-        <div className="dialog-overlay" onClick={() => setShowNewDialog(false)}>
+        <div className="dialog-overlay" onClick={() => closeProjectDialog(false)}>
           <div className="dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>New Project</h3>
+            <h3>{projectDialogMode === 'new' ? 'New Project' : 'Save Project'}</h3>
             <label>Project name:</label>
             <input value={newName} onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleNewProject()}
               placeholder="MyApp" autoFocus />
+            {projectDialogError && (
+              <div style={{ color: 'var(--red)', fontSize: 12, marginTop: -6, marginBottom: 10 }}>
+                {projectDialogError}
+              </div>
+            )}
             <div className="dialog-actions">
-              <button onClick={handleNewProject}>Create</button>
-              <button onClick={() => setShowNewDialog(false)}>Cancel</button>
+              <button onClick={handleNewProject}>
+                {projectDialogMode === 'new' ? 'Create' : 'Save'}
+              </button>
+              <button onClick={() => closeProjectDialog(false)}>Cancel</button>
             </div>
           </div>
         </div>
