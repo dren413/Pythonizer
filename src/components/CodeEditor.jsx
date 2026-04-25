@@ -4,6 +4,7 @@ import { python, pythonLanguage } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { autocompletion } from '@codemirror/autocomplete';
 import { keymap, EditorView } from '@codemirror/view';
+import { EditorState } from '@codemirror/state';
 import { indentWithTab, insertNewlineAndIndent, undo as cmUndo, redo as cmRedo } from '@codemirror/commands';
 import useDesignStore from '../store/designStore';
 import { generateGuiPy, generateMainPyTemplate, enforceMainPyTemplate } from '../utils/codeGenerator';
@@ -37,6 +38,39 @@ function buildWidgetCompletionSource(widgets) {
     if (!filtered.length) return null;
     return { from, options: filtered };
   };
+}
+
+const PROTECTED_MAIN_PATTERNS = [
+  /^from gui import AppGUI, run$/,
+  /^import pygame$/,
+  /^class App\(AppGUI\):$/,
+  /^    def on_start\(self\):$/,
+  /^    def _game_loop\(self\):$/,
+  /^run\(App\)$/,
+];
+
+function isProtectedMainLine(text) {
+  return PROTECTED_MAIN_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function buildProtectedMainPyExtension() {
+  return EditorState.transactionFilter.of((tr) => {
+    if (!tr.docChanged) return tr;
+
+    let touchesProtectedLine = false;
+    tr.changes.iterChangedRanges((fromA, toA) => {
+      const startLine = tr.startState.doc.lineAt(fromA);
+      const endLine = tr.startState.doc.lineAt(Math.min(toA, tr.startState.doc.length));
+      for (let lineNo = startLine.number; lineNo <= endLine.number; lineNo += 1) {
+        if (isProtectedMainLine(tr.startState.doc.line(lineNo).text)) {
+          touchesProtectedLine = true;
+          break;
+        }
+      }
+    });
+
+    return touchesProtectedLine ? [] : tr;
+  });
 }
 
 export default function CodeEditor() {
@@ -101,7 +135,7 @@ export default function CodeEditor() {
     const source = userCode || generateMainPyTemplate(widgets);
     const normalized = enforceMainPyTemplate(source, widgets, userCode);
     if (normalized !== userCode) {
-      setUserCode(normalized);
+      setUserCode(normalized, false);
     }
   }, [widgets]);
 
@@ -180,6 +214,7 @@ export default function CodeEditor() {
       '.cm-gutters': { fontSize: `${fontSizePx}px` },
     }),
   ];
+  if (activeTab === 'main.py') extensions.push(buildProtectedMainPyExtension());
   if (theme === 'dark') extensions.push(oneDark);
 
   return (

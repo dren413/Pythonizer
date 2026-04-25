@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import useDesignStore from '../store/designStore';
 import {
   MousePointerClick, Type, TextCursorInput, FileText,
-  List, CheckSquare, Circle, SlidersHorizontal, Gamepad2,
+  List, CheckSquare, Circle, SlidersHorizontal, Activity, Gamepad2,
 } from 'lucide-react';
 
 const PALETTE = [
@@ -14,6 +14,7 @@ const PALETTE = [
   { type: 'Checkbutton',  icon: CheckSquare,       label: 'Check' },
   { type: 'Radiobutton',  icon: Circle,            label: 'Radio' },
   { type: 'Scale',        icon: SlidersHorizontal, label: 'Scale' },
+  { type: 'Progressbar',  icon: Activity,          label: 'Progress' },
   { type: 'PygameCanvas', icon: Gamepad2,           label: 'Pygame' },
 ];
 

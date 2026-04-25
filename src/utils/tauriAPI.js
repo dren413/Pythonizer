@@ -12,7 +12,10 @@ function onEvent(eventName, cb) {
 
 const tauriAPI = {
   // ── Project ──────────────────────────────────────────────────────────────
-  newProject: () => invoke('new_project'),
+  newProject: (data) => invoke('new_project', {
+    projectName: data.projectName,
+    parentDir: data.parentDir,
+  }),
   openProject: () => {},  // open is driven by the menu (Rust emits project-opened)
   saveProject: (data) => invoke('save_project', { args: data }),
 

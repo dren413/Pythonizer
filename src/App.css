@@ -56,6 +56,19 @@ body {
   height: 100vh;
   background: var(--bg-primary);
   color: var(--text-primary);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.app-root input,
+.app-root textarea,
+.app-root select,
+.code-editor,
+.code-editor *,
+.console-body,
+.console-body * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -293,6 +306,11 @@ body {
 
 .canvas-body {
   background: var(--bg-canvas);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--text-muted) 34%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 16px 16px;
   position: relative;
   outline: none;
   overflow: hidden;
@@ -310,6 +328,11 @@ body {
 }
 .canvas-widget:hover { border-color: var(--accent); }
 .canvas-widget.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.canvas-widget.fullscreen-widget {
+  padding-top: 0;
+  box-sizing: border-box;
+  cursor: default;
+}
 
 .widget-code-label {
   position: absolute;
@@ -424,6 +447,26 @@ body {
 }
 .preview-scale.vertical .scale-thumb {
   left: 50%; top: 30%; transform: translateX(-50%);
+}
+
+.preview-progressbar {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.preview-progressbar .progressbar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+.preview-progressbar.vertical .progressbar-fill {
+  top: auto;
+  right: 0;
+  width: 100%;
 }
 
 .preview-pygame {
@@ -579,18 +622,28 @@ body {
   border-radius: 5px;
 }
 
-.color-hex {
+.rgb-fields {
   flex: 1;
-  height: 28px;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.rgb-field {
+  display: flex !important;
   align-items: center;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  gap: 3px;
+  margin: 0 !important;
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+}
+
+.rgb-field input {
+  min-width: 0;
+  height: 28px;
+  padding: 4px !important;
+  text-align: center;
   font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 11px;
 }
 
 .inspector-toggle {

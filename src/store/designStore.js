@@ -75,9 +75,16 @@ export const WIDGET_DEFAULTS = {
       tickinterval: '0', resolution: '1', showvalue: true,
     },
   },
+  Progressbar: {
+    width: 180, height: 22,
+    props: {
+      value: '35', maximum: '100', orient: 'horizontal',
+      bg: '#e0e0e0', fill: '#2f80ed', enabled: true,
+    },
+  },
   PygameCanvas: {
     width: 400, height: 300,
-    props: { bg: '#1e1e2e' },
+    props: { bg: '#1e1e2e', fps: '30', fullscreen: false },
   },
 };
 
@@ -90,6 +97,7 @@ export const WIDGET_EVENTS = {
   Checkbutton: ['change'],
   Radiobutton: ['change'],
   Scale: ['change'],
+  Progressbar: ['change'],
   PygameCanvas: [],
 };
 
@@ -206,11 +214,15 @@ const useDesignStore = create((set, get) => ({
       if (num > maxId) maxId = num;
     }
     nextId = maxId + 1;
+    const widgets = (projectData.widgets || []).map((w) => ({
+      ...w,
+      props: { ...(WIDGET_DEFAULTS[w.type]?.props || {}), ...(w.props || {}) },
+    }));
     set({
       isDirty: false,
       projectPath,
       projectName: projectData.name || basenameFromPath(projectPath),
-      widgets: projectData.widgets || [],
+      widgets,
       windowTitle: projectData.windowTitle || 'My App',
       canvasSize: projectData.canvasSize || { width: 500, height: 400 },
       windowResizable: projectData.windowResizable || false,
@@ -250,7 +262,15 @@ const useDesignStore = create((set, get) => ({
   },
 
   // ── Canvas / window ──
-  setCanvasSize: (size) => set({ canvasSize: size, isDirty: true }),
+  setCanvasSize: (size) => set((s) => ({
+    canvasSize: size,
+    isDirty: true,
+    widgets: s.widgets.map((w) => (
+      w.type === 'PygameCanvas' && w.props?.fullscreen
+        ? { ...w, x: 0, y: 0, width: size.width, height: size.height }
+        : w
+    )),
+  })),
   setWindowTitle: (title) => { get()._pushHistory(); set({ windowTitle: title, isDirty: true }); },
   setWindowResizable: (r) => { get()._pushHistory(); set({ windowResizable: r, isDirty: true }); },
   setWindowBg: (bg) => { get()._pushHistory(); set({ windowBg: bg, isDirty: true }); },
@@ -263,9 +283,16 @@ const useDesignStore = create((set, get) => ({
   addWidget: (type, x, y) => {
     const defaults = WIDGET_DEFAULTS[type];
     if (!defaults) return;
+    if (type === 'PygameCanvas') {
+      const existing = get().widgets.find((w) => w.type === 'PygameCanvas');
+      if (existing) {
+        set({ selectedWidgetId: existing.id });
+        return;
+      }
+    }
     get()._pushHistory();
     const id = `widget_${nextId++}`;
-    const NAME_PREFIXES = { PygameCanvas: 'canvas' };
+    const NAME_PREFIXES = { PygameCanvas: 'canvas', Progressbar: 'progressbar' };
     const prefix = NAME_PREFIXES[type] || type.toLowerCase();
     // Find first available name
     let idx = 1;
@@ -328,21 +355,21 @@ const useDesignStore = create((set, get) => ({
   addExtraFile: (name) => {
     const s = get();
     if (name === 'main.py' || name === 'gui.py' || s.extraFiles[name]) return;
-    set({ extraFiles: { ...s.extraFiles, [name]: `# ${name}\n` }, activeTab: name });
+    set({ extraFiles: { ...s.extraFiles, [name]: `# ${name}\n` }, activeTab: name, isDirty: true });
   },
 
   removeExtraFile: (name) => {
     const s = get();
     const files = { ...s.extraFiles };
     delete files[name];
-    set({ extraFiles: files, activeTab: s.activeTab === name ? 'main.py' : s.activeTab });
+    set({ extraFiles: files, activeTab: s.activeTab === name ? 'main.py' : s.activeTab, isDirty: true });
   },
 
   updateExtraFile: (name, code) =>
-    set((s) => ({ extraFiles: { ...s.extraFiles, [name]: code } })),
+    set((s) => ({ extraFiles: { ...s.extraFiles, [name]: code }, isDirty: true })),
 
   // ── Editor ──
-  setUserCode: (code) => set({ userCode: code }),
+  setUserCode: (code, markDirty = true) => set((s) => ({ userCode: code, isDirty: markDirty ? true : s.isDirty })),
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // ── Console ──
